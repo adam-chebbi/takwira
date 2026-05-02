@@ -9,9 +9,9 @@ export default function BottomNav() {
 
   const navItems = [
     { label: 'Accueil', icon: Home, path: '/' },
-    { label: 'Terrains', icon: MapPin, path: '/terrains' },
-    { label: 'Match', icon: CircleDot, path: '/creer-match', special: true },
-    { label: 'Matchs', icon: Calendar, path: '/profil?tab=matchs' },
+    { label: 'Explorer', icon: MapPin, path: '/terrains' },
+    { label: 'Jouer', icon: CircleDot, path: '/matches', special: true },
+    { label: 'Tournois', icon: Calendar, path: '/tournaments' },
     { label: 'Profil', icon: User, path: '/profil' },
   ];
 

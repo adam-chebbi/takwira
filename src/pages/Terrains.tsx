@@ -15,6 +15,7 @@ import { Input } from '@/src/components/ui/Input';
 import { TerrainSkeleton } from '@/src/components/ui/Skeleton';
 import { MOCK_TERRAINS } from '@/src/lib/mockData';
 import { cn } from '@/src/lib/utils';
+import { SEO } from '@/src/components/layout/SEO';
 
 const FILTER_OPTIONS = [
   "Tous les types",
@@ -71,6 +72,7 @@ export default function Terrains() {
 
   return (
     <div className="flex flex-col h-screen md:pt-20 bg-background-primary overflow-hidden">
+      <SEO title="Trouve ton terrain | Takwira.com" />
       {/* Top Search & Filter Bar */}
       <div className="sticky top-0 z-30 bg-background-secondary border-b border-border-subtle p-4 pb-2 md:px-8">
         <div className="max-w-7xl mx-auto flex flex-col gap-4">

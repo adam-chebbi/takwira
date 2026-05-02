@@ -20,16 +20,17 @@ export const Footer = () => {
             <li><NavLink to="/matches" className="hover:text-accent-green transition-colors">Matchs Ouverts</NavLink></li>
             <li><NavLink to="/tournaments" className="hover:text-accent-green transition-colors">Tournois</NavLink></li>
             <li><NavLink to="/academies" className="hover:text-accent-green transition-colors">Académies</NavLink></li>
+            <li><NavLink to="/a-propos" className="hover:text-accent-green transition-colors">À Propos</NavLink></li>
           </ul>
         </div>
 
         <div>
           <h4 className="text-sm font-bold uppercase tracking-wider mb-6 text-text-primary">Support</h4>
           <ul className="space-y-4 text-text-secondary text-sm">
-            <li><a href="#" className="hover:text-accent-green transition-colors">Centre d'aide</a></li>
-            <li><a href="#" className="hover:text-accent-green transition-colors">Conditions d'utilisation</a></li>
-            <li><a href="#" className="hover:text-accent-green transition-colors">Politique de confidentialité</a></li>
-            <li><a href="#" className="hover:text-accent-green transition-colors">Contact</a></li>
+            <li><NavLink to="/aide" className="hover:text-accent-green transition-colors">Centre d'aide</NavLink></li>
+            <li><NavLink to="/terms" className="hover:text-accent-green transition-colors">Conditions d'utilisation</NavLink></li>
+            <li><NavLink to="/privacy" className="hover:text-accent-green transition-colors">Politique de confidentialité</NavLink></li>
+            <li><NavLink to="/contact" className="hover:text-accent-green transition-colors">Contact</NavLink></li>
           </ul>
         </div>
 

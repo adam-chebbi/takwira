@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { AnimatePresence, motion } from 'motion/react';
 import Navbar from '@/src/components/layout/Navbar';
 import BottomNav from '@/src/components/layout/BottomNav';
@@ -9,10 +10,18 @@ import Home from '@/src/pages/Home';
 import Terrains from '@/src/pages/Terrains';
 import TerrainDetail from '@/src/pages/TerrainDetail';
 import ReservationFlow from '@/src/pages/ReservationFlow';
+import Matches from '@/src/pages/Matches';
+import Tournaments from '@/src/pages/Tournaments';
+import Academies from '@/src/pages/Academies';
 import MatchPublic from '@/src/pages/MatchPublic';
 import MatchManage from '@/src/pages/MatchManage';
 import Auth from '@/src/pages/Auth';
 import Profile from '@/src/pages/Profile';
+import HelpCenter from '@/src/pages/HelpCenter';
+import Terms from '@/src/pages/Terms';
+import Privacy from '@/src/pages/Privacy';
+import Contact from '@/src/pages/Contact';
+import About from '@/src/pages/About';
 import DashboardLayout from '@/src/components/DashboardLayout';
 import ManagerOnboarding from '@/src/pages/ManagerOnboarding';
 import DashboardHome from '@/src/pages/dashboard/DashboardHome';
@@ -66,6 +75,30 @@ const AnimatedRoutes = () => {
           }
         />
         <Route
+          path="/matches"
+          element={
+            <PageTransition>
+              <Matches />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/tournaments"
+          element={
+            <PageTransition>
+              <Tournaments />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/academies"
+          element={
+            <PageTransition>
+              <Academies />
+            </PageTransition>
+          }
+        />
+        <Route
           path="/reserver/:id"
           element={
             <PageTransition>
@@ -113,6 +146,46 @@ const AnimatedRoutes = () => {
             </PageTransition>
           }
         />
+        <Route
+          path="/aide"
+          element={
+            <PageTransition>
+              <HelpCenter />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <PageTransition>
+              <Terms />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <PageTransition>
+              <Privacy />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/contact"
+          element={
+            <PageTransition>
+              <Contact />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/a-propos"
+          element={
+            <PageTransition>
+              <About />
+            </PageTransition>
+          }
+        />
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardHome />} />
           <Route path="terrains" element={<DashboardTerrains />} />
@@ -139,18 +212,20 @@ const AnimatedRoutes = () => {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <Router>
-        <div className="min-h-screen bg-background-primary text-text-primary selection:bg-accent-green/30 selection:text-accent-green overflow-x-hidden">
-          <Navbar />
-          <main>
-            <AnimatedRoutes />
-          </main>
-          <Footer />
-          <BottomNav />
-        </div>
-      </Router>
-    </ToastProvider>
+    <HelmetProvider>
+      <ToastProvider>
+        <Router>
+          <div className="min-h-screen bg-background-primary text-text-primary selection:bg-accent-green/30 selection:text-accent-green overflow-x-hidden">
+            <Navbar />
+            <main>
+              <AnimatedRoutes />
+            </main>
+            <Footer />
+            <BottomNav />
+          </div>
+        </Router>
+      </ToastProvider>
+    </HelmetProvider>
   );
 }
 

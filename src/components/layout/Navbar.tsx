@@ -19,8 +19,10 @@ export default function Navbar() {
 
   const navLinks = [
     { label: 'Terrains', path: '/terrains' },
-    { label: 'Comment ça marche', path: '/#how-it-works' },
-    { label: 'Pour les Gérants', path: '/inscription-gerant' },
+    { label: 'Matchs', path: '/matches' },
+    { label: 'Tournois', path: '/tournaments' },
+    { label: 'Académies', path: '/academies' },
+    { label: 'Support', path: '/aide' },
   ];
 
   return (

@@ -18,6 +18,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { SEO } from '@/src/components/layout/SEO';
 
 const container = {
   hidden: { opacity: 0 },
@@ -41,6 +42,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col overflow-x-hidden">
+      <SEO />
       {/* SECTION 1: HERO */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         {/* Background Image & Overlay */}

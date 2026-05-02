@@ -1,0 +1,382 @@
+import * as React from 'react';
+import { motion, useScroll, useTransform } from 'motion/react';
+import { Button } from '@/src/components/ui/Button';
+import { Card } from '@/src/components/ui/Card';
+import { Badge } from '@/src/components/ui/Badge';
+import { Counter } from '@/src/components/ui/Counter';
+import { MOCK_COMPLEXES } from '@/src/lib/mockData';
+import { 
+  Users, 
+  MapPin, 
+  ChevronRight, 
+  CalendarCheck, 
+  Building2, 
+  CheckCircle2, 
+  ArrowRight,
+  AppWindow,
+  Star,
+  ChevronDown
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const item = {
+  hidden: { y: 20, opacity: 0 },
+  show: { y: 0, opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } },
+};
+
+export default function Home() {
+  const { scrollY } = useScroll();
+  const heroY = useTransform(scrollY, [0, 500], [0, 200]);
+  const heroOpacity = useTransform(scrollY, [0, 500], [1, 0]);
+
+  return (
+    <div className="flex flex-col overflow-x-hidden">
+      {/* SECTION 1: HERO */}
+      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+        {/* Background Image & Overlay */}
+        <div className="absolute inset-0 z-0">
+          <motion.img
+            style={{ y: heroY, opacity: heroOpacity }}
+            src="https://images.unsplash.com/photo-1556056504-5c7696c4c28d?auto=format&fit=crop&q=80&w=2000"
+            alt="Football pitch night"
+            className="h-full w-full object-cover scale-110"
+          />
+          <div className="absolute inset-0 bg-[#0A0A0F]/82 z-10" />
+        </div>
+
+        {/* Animated Background Orb */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent-green/6 rounded-full blur-[120px] animate-pulse z-10" />
+
+        <div className="relative z-20 text-center px-4 max-w-5xl">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="flex justify-center mb-6"
+          >
+            <Badge variant="outline" className="bg-background-primary/40 backdrop-blur-md border-border-subtle py-2 px-4 rounded-full">
+              <span className="mr-2">🇹🇳</span> Plateforme N°1 en Tunisie
+            </Badge>
+          </motion.div>
+
+          <h1 className="flex flex-col text-6xl md:text-[100px] font-display font-extrabold mb-8 leading-[0.85] tracking-tighter">
+            <motion.span
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+            >
+              ORGANISE.
+            </motion.span>
+            <motion.span
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.35, duration: 0.5 }}
+            >
+              RÉSERVE.
+            </motion.span>
+            <motion.span
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              className="text-accent-green"
+            >
+              JOUE.
+            </motion.span>
+          </h1>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8, duration: 0.6 }}
+            className="text-lg md:text-xl text-text-secondary mb-10 max-w-2xl mx-auto font-sans font-medium"
+          >
+            La plateforme qui connecte les joueurs et les terrains de foot en Tunisie.
+          </motion.p>
+
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 1, duration: 0.5 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center"
+          >
+            <Button size="lg" className="text-lg min-w-[220px]">
+              Trouver un Terrain <ArrowRight className="ml-2" size={20} />
+            </Button>
+            <Button size="lg" variant="outline" className="text-lg min-w-[220px]">
+              Gérer mon Complexe
+            </Button>
+          </motion.div>
+
+          {/* Trust Stats */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.3, duration: 0.5 }}
+            className="grid grid-cols-3 gap-8 mt-16 max-w-2xl mx-auto"
+          >
+            <div className="text-center">
+              <Counter value={150} suffix="+" className="block text-3xl font-display font-bold text-accent-green" />
+              <span className="text-xs text-text-secondary uppercase tracking-widest font-semibold">Terrains</span>
+            </div>
+            <div className="text-center">
+              <Counter value={5000} suffix="+" className="block text-3xl font-display font-bold text-accent-green" />
+              <span className="text-xs text-text-secondary uppercase tracking-widest font-semibold">Matchs</span>
+            </div>
+            <div className="text-center">
+              <Counter value={12000} suffix="+" className="block text-3xl font-display font-bold text-accent-green" />
+              <span className="text-xs text-text-secondary uppercase tracking-widest font-semibold">Joueurs</span>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Scroll Down Indicator */}
+        <motion.div
+          animate={{ y: [0, 10, 0] }}
+          transition={{ repeat: Infinity, duration: 2 }}
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 text-accent-green"
+        >
+          <ChevronDown size={32} />
+        </motion.div>
+      </section>
+
+      {/* SECTION 2: HOW IT WORKS */}
+      <section id="how-it-works" className="py-24 px-6 md:px-12 bg-background-primary relative">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl mb-4 text-accent-green">COMMENT ÇA MARCHE</h2>
+          <p className="text-text-secondary text-lg font-sans">Trois étapes simples pour organiser ton match</p>
+        </div>
+
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+          className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 relative"
+        >
+          {/* Connector Line (Desktop) */}
+          <div className="hidden md:block absolute top-1/2 left-[15%] right-[15%] h-0.5 bg-accent-green/10 -translate-y-1/2 z-0 overflow-hidden">
+            <motion.div
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              transition={{ duration: 1, ease: "easeInOut" }}
+              className="h-full bg-accent-green origin-left"
+            />
+          </div>
+
+          {[
+            { step: "1", icon: MapPin, title: "Trouve ton Terrain", text: "Parcours les meilleurs complexes de Tunisie filtrés par ville et type de terrain." },
+            { step: "2", icon: CalendarCheck, title: "Réserve ton Créneau", text: "Choisis l'heure qui te convient et paye en ligne ou directement au complexe." },
+            { step: "3", icon: Users, title: "Joue avec tes Amis", text: "Partage le lien du match, invite tes joueurs et profite d'une partie légendaire." }
+          ].map((item, i) => (
+            <motion.div key={i} variants={item as any} className="relative z-10">
+              <Card className="h-full flex flex-col items-center text-center p-8 bg-background-card/40 backdrop-blur-sm border-border-subtle/50 group">
+                <span className="absolute -top-4 right-4 text-[120px] font-display font-extrabold text-accent-green/10 leading-none pointer-events-none select-none">
+                  {item.step}
+                </span>
+                <div className="h-16 w-16 bg-background-secondary rounded-full flex items-center justify-center text-accent-green mb-6 border border-accent-green/20 group-hover:bg-accent-green group-hover:text-background-primary transition-colors duration-300">
+                  <item.icon size={32} />
+                </div>
+                <h3 className="text-2xl mb-4 font-display font-bold uppercase tracking-tight">{item.title}</h3>
+                <p className="text-text-secondary font-sans leading-relaxed">{item.text}</p>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
+      </section>
+
+      {/* SECTION 3: FEATURED TERRAINS */}
+      <section className="py-24 px-6 md:px-12">
+        <div className="max-w-7xl mx-auto mb-10 flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-4xl md:text-5xl mb-2 text-text-primary">TERRAINS <span className="text-accent-green">POPULAIRES</span></h2>
+            <p className="text-text-secondary text-lg">Réserve ton terrain dans les meilleurs complexes</p>
+          </div>
+          <Link to="/terrains" className="text-accent-green font-sans font-semibold flex items-center gap-1 hover:gap-2 transition-all">
+            Voir tous les terrains <ChevronRight size={20} />
+          </Link>
+        </div>
+
+        <div className="max-w-7xl mx-auto">
+          <div className="flex overflow-x-auto pb-8 gap-6 no-scrollbar snap-x snap-mandatory px-2">
+            {MOCK_COMPLEXES.slice(0, 4).map((complex, i) => (
+              <motion.div
+                key={complex.id}
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="min-w-[280px] md:min-w-[380px] snap-start"
+              >
+                <Card className="p-0 overflow-hidden group cursor-pointer h-full border-none shadow-2xl">
+                  <div className="relative h-64 overflow-hidden">
+                    <img
+                      src={complex.photos[0]}
+                      alt={complex.name}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background-primary/95 via-background-primary/20 to-transparent" />
+                    
+                    <div className="absolute top-4 left-4 flex gap-2">
+                      <Badge variant="primary" className="bg-accent-green text-background-primary border-none text-[10px]">
+                        {i % 2 === 0 ? '6VS6' : '7VS7'}
+                      </Badge>
+                      <Badge variant={i === 2 ? 'danger' : 'primary'} className="bg-background-primary/60 backdrop-blur-md border-none text-[10px]">
+                        {i === 2 ? 'Complet' : 'Disponible'}
+                      </Badge>
+                    </div>
+
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                      <Button className="pointer-events-auto">Voir & Réserver</Button>
+                    </div>
+
+                    <div className="absolute bottom-5 left-5 right-5">
+                      <h3 className="text-2xl font-display font-bold text-white mb-1 uppercase tracking-tight">{complex.name}</h3>
+                      <div className="flex items-center gap-1 text-text-secondary text-sm">
+                        <MapPin size={14} className="text-accent-green" />
+                        <span>{complex.city}, Tunisie</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-5 flex items-center justify-between bg-background-card">
+                    <div className="flex items-center gap-1">
+                      <Star size={16} className="fill-warning text-warning" />
+                      <span className="font-bold text-sm">{complex.rating}</span>
+                      <span className="text-text-secondary text-xs">({(Math.random() * 50 + 10).toFixed(0)} avis)</span>
+                    </div>
+                    <span className="text-accent-green font-display font-bold text-xl">DÈS 12 DT</span>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 4: PLAYERS VS MANAGERS */}
+      <section className="grid grid-cols-1 md:grid-cols-2">
+        {/* For Players */}
+        <div className="bg-[#0D1511] p-12 md:p-24 flex flex-col justify-center items-start border-b md:border-b-0 md:border-r border-border-subtle">
+          <div className="h-16 w-16 bg-accent-green/10 rounded-2xl flex items-center justify-center text-accent-green mb-8">
+            <Users size={40} />
+          </div>
+          <h2 className="text-5xl md:text-6xl mb-6 font-display font-extrabold uppercase">POUR LES <span className="text-accent-green">JOUEURS</span></h2>
+          <ul className="space-y-4 mb-10">
+            {[
+              "Trouver des matchs près de toi",
+              "Rejoindre un match via lien ou QR Code",
+              "Confirmer ta présence en un tap",
+              "Voir tes équipes générées automatiquement",
+              "Historique de tous tes matchs"
+            ].map((feature, i) => (
+              <li key={i} className="flex items-start gap-3 text-text-primary/90 font-sans font-medium">
+                <CheckCircle2 size={24} className="text-accent-green shrink-0" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+          <Button size="lg" className="w-full md:w-auto min-w-[240px]">Créer un compte Joueur</Button>
+        </div>
+
+        {/* For Managers */}
+        <div className="bg-[#0A0A0F] p-12 md:p-24 flex flex-col justify-center items-start">
+          <div className="h-16 w-16 bg-accent-green/10 rounded-2xl flex items-center justify-center text-accent-green mb-8">
+            <Building2 size={40} />
+          </div>
+          <h2 className="text-5xl md:text-6xl mb-6 font-display font-extrabold uppercase">POUR LES <span className="text-accent-green">GÉRANTS</span></h2>
+          <ul className="space-y-4 mb-10">
+            {[
+              "Gérer tous tes terrains depuis un dashboard",
+              "Accepter les réservations en ligne",
+              "Gérer tes académies et abonnements",
+              "Planifier les créneaux récurrents",
+              "Voir les contacts de tes réservants"
+            ].map((feature, i) => (
+              <li key={i} className="flex items-start gap-3 text-text-primary/90 font-sans font-medium">
+                <CheckCircle2 size={24} className="text-accent-green shrink-0" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+          <Button size="lg" variant="outline" className="w-full md:w-auto min-w-[240px]">Enregistrer mon Complexe</Button>
+        </div>
+      </section>
+
+      {/* SECTION 5: LIVE STATS */}
+      <section className="py-24 px-6 md:px-12 bg-background-secondary border-y border-border-subtle overflow-hidden relative">
+        <div className="absolute inset-0 bg-accent-green/2 mix-blend-overlay pointer-events-none" />
+        <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
+          <div>
+            <Counter value={150} suffix="+" className="block text-6xl md:text-8xl font-display font-extrabold text-accent-green mb-2" />
+            <span className="text-text-secondary text-sm md:text-base font-sans font-semibold uppercase tracking-widest">Terrains partenaires</span>
+          </div>
+          <div>
+            <Counter value={5200} suffix="+" className="block text-6xl md:text-8xl font-display font-extrabold text-accent-green mb-2" />
+            <span className="text-text-secondary text-sm md:text-base font-sans font-semibold uppercase tracking-widest">Matchs organisés</span>
+          </div>
+          <div>
+            <Counter value={12000} suffix="+" className="block text-6xl md:text-8xl font-display font-extrabold text-accent-green mb-2" />
+            <span className="text-text-secondary text-sm md:text-base font-sans font-semibold uppercase tracking-widest">Joueurs actifs</span>
+          </div>
+          <div>
+            <Counter value={4.8} decimals={1} suffix=" ★" className="block text-6xl md:text-8xl font-display font-extrabold text-accent-green mb-2" />
+            <span className="text-text-secondary text-sm md:text-base font-sans font-semibold uppercase tracking-widest">Note moyenne</span>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 6: APP DOWNLOAD */}
+      <section className="py-32 px-6 text-center bg-background-primary overflow-hidden relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-accent-green/5 blur-[150px] -z-0" />
+        <div className="relative z-10 max-w-4xl mx-auto">
+          <Badge variant="primary" className="mb-6">MOBILE FIRST</Badge>
+          <h2 className="text-5xl md:text-7xl mb-6 font-display font-extrabold tracking-tighter">DISPONIBLE SUR <span className="text-accent-green">MOBILE</span></h2>
+          <p className="text-text-secondary text-xl mb-12 max-w-xl mx-auto font-sans">
+            Garde le contrôle de tes matchs où que tu sois. Télécharge l'application Takwira gratuitement.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+            <button className="flex items-center gap-4 bg-background-card border border-border-subtle p-4 pr-10 rounded-2xl hover:border-accent-green hover:bg-background-secondary transition-all group min-w-[240px]">
+               <div className="h-12 w-12 bg-white/5 rounded-xl flex items-center justify-center text-white group-hover:text-accent-green">
+                  <AppWindow size={32} />
+               </div>
+               <div className="text-left">
+                  <span className="text-[10px] text-text-secondary block font-bold uppercase">Disponible sur</span>
+                  <span className="text-lg font-bold block leading-none">App Store</span>
+               </div>
+            </button>
+            <button className="flex items-center gap-4 bg-background-card border border-border-subtle p-4 pr-10 rounded-2xl hover:border-accent-green hover:bg-background-secondary transition-all group min-w-[240px]">
+               <div className="h-12 w-12 bg-white/5 rounded-xl flex items-center justify-center text-white group-hover:text-accent-green">
+                  <PlayIcon />
+               </div>
+               <div className="text-left">
+                  <span className="text-[10px] text-text-secondary block font-bold uppercase">Disponible sur</span>
+                  <span className="text-lg font-bold block leading-none">Google Play</span>
+               </div>
+            </button>
+          </div>
+        </div>
+      </section>
+      
+      {/* Spacer for bottom nav if mobile */}
+      <div className="h-20 md:hidden" />
+    </div>
+  );
+}
+
+const PlayIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-8 h-8 fill-current" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.61 3,21.09 3,20.5M16.81,15.12L18.66,16.19C19.8,16.85 19.8,18.15 18.66,18.81L7.07,25.5L15.39,17.18M23.1,13.6L20.3,15.18L17.74,12.63L20.3,10.82L23.1,12.4C23.9,12.85 23.9,13.15 23.1,13.6M15.39,6.82L7.07,15.5L18.66,2.19C19.8,2.85 19.8,4.15 18.66,4.81L16.81,5.88" />
+  </svg>
+);
+

@@ -1,14 +1,16 @@
 import * as React from 'react';
 import { motion, HTMLMotionProps } from 'motion/react';
+import { Slot } from '@radix-ui/react-slot';
 import { cn } from '@/src/lib/utils';
 
 interface ButtonProps extends HTMLMotionProps<'button'> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg' | 'icon';
+  asChild?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', ...props }, ref) => {
+  ({ className, variant = 'primary', size = 'md', asChild = false, ...props }, ref) => {
     const variants = {
       primary: 'bg-accent-green text-background-primary hover:bg-accent-green-dark shadow-lg shadow-accent-green/10',
       secondary: 'bg-background-secondary text-text-primary hover:bg-background-card',
@@ -23,6 +25,21 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       lg: 'px-8 py-4 text-lg font-bold',
       icon: 'p-2',
     };
+
+    if (asChild) {
+      return (
+        <Slot
+          className={cn(
+            'inline-flex items-center justify-center rounded-button font-sans font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-accent-green/50 disabled:opacity-50 disabled:pointer-events-none',
+            variants[variant],
+            sizes[size],
+            className
+          )}
+          ref={ref}
+          {...props}
+        />
+      );
+    }
 
     return (
       <motion.button

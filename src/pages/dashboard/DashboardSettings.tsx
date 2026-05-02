@@ -22,17 +22,60 @@ import { Button } from '@/src/components/ui/Button';
 import { Badge } from '@/src/components/ui/Badge';
 import { cn } from '@/src/lib/utils';
 
+import { useAuth } from '@/src/contexts/AuthContext';
+import { useManagerComplex } from '@/src/hooks/useManagerComplex';
+import { db } from '@/src/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+
 export default function DashboardSettings() {
+  const { user } = useAuth();
+  const { complex, isLoading } = useManagerComplex(user?.uid);
   const [activeTab, setActiveTab] = React.useState<'complex' | 'billing' | 'notifications' | 'appearance'>('complex');
+  const [formData, setFormData] = React.useState({
+    name: '',
+    phone: '',
+    address: '',
+    description: ''
+  });
+
+  React.useEffect(() => {
+    if (complex) {
+      setFormData({
+        name: complex.name,
+        phone: 'Non renseigné', // Complex model doesn't have phone yet, maybe use manager phone
+        address: complex.address,
+        description: complex.description || ''
+      });
+    }
+  }, [complex]);
+
+  const handleSave = async () => {
+    if (!complex) return;
+    try {
+      await updateDoc(doc(db, 'complexes', complex.id), {
+        name: formData.name,
+        address: formData.address,
+        description: formData.description
+      });
+      alert("Paramètres enregistrés !");
+    } catch (error) {
+      console.error("Error saving complex settings:", error);
+    }
+  };
+
+  if (isLoading) return <div className="p-10 animate-pulse bg-background-secondary h-screen" />;
 
   return (
-    <div className="p-6 md:p-10 space-y-12">
+    <div className="p-6 md:p-10 space-y-12 text-white">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-4xl font-display font-black uppercase tracking-tight text-white">Paramètres</h1>
           <p className="text-text-secondary font-medium uppercase tracking-widest text-[10px]">Gère les détails de ton complexe et ton compte</p>
         </div>
-        <Button className="h-12 px-8 uppercase font-black text-xs tracking-widest gap-2 shadow-[0_10px_20px_rgba(34,197,94,0.2)]">
+        <Button 
+          onClick={handleSave}
+          className="h-12 px-8 uppercase font-black text-xs tracking-widest gap-2 shadow-[0_10px_20px_rgba(34,197,94,0.2)]"
+        >
           <Save size={18} /> Enregistrer
         </Button>
       </div>
@@ -78,16 +121,18 @@ export default function DashboardSettings() {
                       <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Nom du complexe</label>
                       <input 
                         type="text" 
-                        defaultValue="Gammarth Foot Center"
-                        className="w-full h-14 bg-background-secondary border border-border-subtle rounded-xl px-4 text-sm focus:border-accent-green outline-none"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full h-14 bg-background-secondary border border-border-subtle rounded-xl px-4 text-sm focus:border-accent-green outline-none text-white transition-all"
                       />
                    </div>
                    <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Téléphone Contact</label>
                       <input 
                         type="tel" 
-                        defaultValue="55 123 456"
-                        className="w-full h-14 bg-background-secondary border border-border-subtle rounded-xl px-4 text-sm focus:border-accent-green outline-none"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        className="w-full h-14 bg-background-secondary border border-border-subtle rounded-xl px-4 text-sm focus:border-accent-green outline-none text-white transition-all"
                       />
                    </div>
                    <div className="space-y-2 md:col-span-2">
@@ -96,10 +141,19 @@ export default function DashboardSettings() {
                         <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
                         <input 
                           type="text" 
-                          defaultValue="Av. Habib Bourguiba, Gammarth 2070, Tunis"
-                          className="w-full h-14 bg-background-secondary border border-border-subtle rounded-xl pl-12 pr-4 text-sm focus:border-accent-green outline-none"
+                          value={formData.address}
+                          onChange={(e) => setFormData({...formData, address: e.target.value})}
+                          className="w-full h-14 bg-background-secondary border border-border-subtle rounded-xl pl-12 pr-4 text-sm focus:border-accent-green outline-none text-white transition-all"
                         />
                       </div>
+                   </div>
+                   <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Description</label>
+                      <textarea 
+                        value={formData.description}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        className="w-full h-32 bg-background-secondary border border-border-subtle rounded-xl p-4 text-sm focus:border-accent-green outline-none text-white transition-all resize-none"
+                      />
                    </div>
                 </div>
               </Card>
@@ -117,9 +171,9 @@ export default function DashboardSettings() {
                  </div>
 
                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[1, 2, 3].map(i => (
+                    {complex?.photos?.map((photo, i) => (
                       <div key={i} className="aspect-square rounded-2xl overflow-hidden relative group border border-border-subtle">
-                         <img src={`https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=400&auto=format&fit=crop`} className="w-full h-full object-cover" alt="" />
+                         <img src={photo} className="w-full h-full object-cover" alt="" />
                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <button className="w-8 h-8 rounded-lg bg-danger/80 text-white flex items-center justify-center hover:bg-danger transition-colors">
                                <Trash2 size={14} />
@@ -131,47 +185,6 @@ export default function DashboardSettings() {
                        <Plus size={24} />
                        <span className="text-[8px] font-black uppercase tracking-widest">Upload</span>
                     </button>
-                 </div>
-              </Card>
-
-              {/* Social Presence */}
-              <Card className="p-8 space-y-8 bg-background-card border-border-subtle">
-                 <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-6 bg-accent-green rounded-full" />
-                    <h2 className="text-xl font-display font-black uppercase tracking-tight">Présence Digitale</h2>
-                 </div>
-
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary">
-                          <Globe size={14} /> Site Web
-                       </div>
-                       <input 
-                         type="text" 
-                         placeholder="https://..."
-                         className="w-full h-12 bg-background-secondary border border-border-subtle rounded-xl px-4 text-xs focus:border-accent-green outline-none"
-                       />
-                    </div>
-                    <div className="space-y-2">
-                       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary">
-                          <Instagram size={14} /> Instagram
-                       </div>
-                       <input 
-                         type="text" 
-                         placeholder="@compte"
-                         className="w-full h-12 bg-background-secondary border border-border-subtle rounded-xl px-4 text-xs focus:border-accent-green outline-none"
-                       />
-                    </div>
-                    <div className="space-y-2">
-                       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary">
-                          <Facebook size={14} /> Facebook
-                       </div>
-                       <input 
-                         type="text" 
-                         placeholder="facebook.com/..."
-                         className="w-full h-12 bg-background-secondary border border-border-subtle rounded-xl px-4 text-xs focus:border-accent-green outline-none"
-                       />
-                    </div>
                  </div>
               </Card>
             </div>

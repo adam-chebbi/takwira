@@ -1,15 +1,18 @@
 import * as React from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bell, User, LogOut, ChevronRight, Menu, X, Plus } from 'lucide-react';
+import { Bell, User, LogOut, ChevronRight, Plus, LayoutDashboard, ShieldCheck } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { Button } from '@/src/components/ui/Button';
+import { useAuth } from '@/src/contexts/AuthContext';
 
 export default function Navbar() {
+  const { user, userProfile, role, signOut } = useAuth();
   const [scrolled, setScrolled] = React.useState(false);
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false); // Mock sync
   const [showDropdown, setShowDropdown] = React.useState(false);
   const location = useLocation();
+
+  const isLoggedIn = !!user;
 
   React.useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 80);
@@ -62,12 +65,14 @@ export default function Navbar() {
             <Link to="/connexion" className="text-sm font-bold text-text-secondary hover:text-white hidden sm:block">
               Connexion
             </Link>
-            <Button className="h-10 px-6 rounded-full font-black uppercase text-[10px] tracking-widest gap-2 bg-accent-green hover:bg-accent-green/80 text-black">
-              <Plus size={16} /> Créer un Match
+            <Button 
+              asChild
+              className="h-10 px-6 rounded-full font-black uppercase text-[10px] tracking-widest gap-2 bg-accent-green hover:bg-accent-green/80 text-black"
+            >
+              <Link to="/connexion">
+                <Plus size={16} /> Créer un Match
+              </Link>
             </Button>
-            <button className="lg:hidden text-white" onClick={() => setIsLoggedIn(true)}>
-               <User size={24} />
-            </button>
           </div>
         ) : (
           <div className="flex items-center gap-6 relative">
@@ -79,9 +84,15 @@ export default function Navbar() {
              <div className="relative">
                 <button 
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="w-10 h-10 rounded-full border-2 border-accent-green/20 p-0.5 hover:border-accent-green transition-all"
+                  className="w-10 h-10 rounded-full border-2 border-accent-green/20 p-0.5 hover:border-accent-green transition-all overflow-hidden"
                 >
-                   <div className="w-full h-full rounded-full bg-purple-500 flex items-center justify-center text-xs font-black text-white">AS</div>
+                   {userProfile?.avatarUrl ? (
+                     <img src={userProfile.avatarUrl} alt="" className="w-full h-full object-cover rounded-full" />
+                   ) : (
+                     <div className="w-full h-full rounded-full bg-accent-green flex items-center justify-center text-xs font-black text-black uppercase">
+                       {userProfile?.name?.substring(0, 2) || user?.phoneNumber?.slice(-2)}
+                     </div>
+                   )}
                 </button>
 
                 <AnimatePresence>
@@ -95,14 +106,15 @@ export default function Navbar() {
                         className="absolute top-14 right-0 w-64 bg-background-card border border-border-subtle rounded-2xl shadow-2xl p-2 z-50 origin-top-right overflow-hidden"
                       >
                          <div className="p-4 border-b border-border-subtle mb-1">
-                            <p className="text-xs font-black uppercase tracking-widest text-text-tertiary">Ahmed Skander</p>
-                            <p className="text-[10px] font-bold text-text-secondary">Joueur · Ariana</p>
+                            <p className="text-xs font-black uppercase tracking-widest text-text-tertiary">{userProfile?.name}</p>
+                            <p className="text-[10px] font-bold text-text-secondary capitalize">{role} · {userProfile?.city}</p>
                          </div>
                          {[
                            { label: 'Mon Profil', icon: User, path: '/profil' },
                            { label: 'Mes Matchs', icon: ChevronRight, path: '/profil?tab=matchs' },
-                           { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', manager: true },
-                         ].map((item, i) => (
+                           { label: 'Dashboard Gérant', icon: LayoutDashboard, path: '/dashboard', show: role === 'manager' || role === 'admin' },
+                           { label: 'Admin', icon: ShieldCheck, path: '/admin', show: role === 'admin' },
+                         ].filter(item => item.show !== false).map((item, i) => (
                            <Link 
                             key={i} 
                             to={item.path} 
@@ -114,7 +126,7 @@ export default function Navbar() {
                            </Link>
                          ))}
                          <button 
-                           onClick={() => { setIsLoggedIn(false); setShowDropdown(false); }}
+                           onClick={() => { signOut(); setShowDropdown(false); }}
                            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-danger/10 text-danger transition-all text-sm font-bold text-left"
                          >
                             <LogOut size={16} /> Déconnexion
@@ -130,23 +142,3 @@ export default function Navbar() {
     </nav>
   );
 }
-
-const LayoutDashboard = ({ ...props }) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect width="7" height="9" x="3" y="3" rx="1" />
-    <rect width="7" height="5" x="14" y="3" rx="1" />
-    <rect width="7" height="9" x="14" y="12" rx="1" />
-    <rect width="7" height="5" x="3" y="16" rx="1" />
-  </svg>
-);

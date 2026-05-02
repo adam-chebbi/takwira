@@ -6,40 +6,16 @@ import { Button } from '@/src/components/ui/Button';
 import { Badge } from '@/src/components/ui/Badge';
 import { SEO } from '@/src/components/layout/SEO';
 
-const ACADEMIES = [
-  {
-    id: '1',
-    name: 'PSG Academy Tunis',
-    location: 'La Marsa / Gammarth',
-    ageRange: '4 - 16 ans',
-    rating: 4.9,
-    reviews: 124,
-    features: ['Coaches Diplômés', 'Kit Inclus', 'Scouting Pro'],
-    price: 'A partir de 120 DT / Mois'
-  },
-  {
-    id: '2',
-    name: 'Espérance Academy',
-    location: 'Parc B, Tunis',
-    ageRange: '6 - 18 ans',
-    rating: 4.7,
-    reviews: 350,
-    features: ['Tradition', 'Compétition', 'Internat'],
-    price: 'A partir de 80 DT / Mois'
-  },
-  {
-    id: '3',
-    name: 'Elite Skills Academy',
-    location: 'Lac 1',
-    ageRange: '8 - 20 ans',
-    rating: 4.8,
-    reviews: 89,
-    features: ['Individuel', 'Analyse Vidéo', 'Gym'],
-    price: 'Sur devis'
-  }
-];
+import { useAcademies } from '@/src/hooks/useAcademies';
 
 export default function Academies() {
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const { academies, isLoading } = useAcademies();
+
+  const filteredAcademies = academies.filter(academy => 
+    academy.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="pt-32 pb-20 px-6 md:px-12 max-w-7xl mx-auto space-y-16">
       <SEO title="Académies de Foot | Takwira.com" description="Inscrivez votre enfant dans les meilleures académies de football en Tunisie." />
@@ -60,6 +36,8 @@ export default function Academies() {
                 <input 
                   type="text" 
                   placeholder="Zone géographique..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full bg-background-secondary border border-border-subtle rounded-2xl h-16 pl-14 pr-6 focus:border-accent-green outline-none text-white"
                 />
              </div>
@@ -83,7 +61,17 @@ export default function Academies() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 pt-16">
-        {ACADEMIES.map((academy, i) => (
+        {isLoading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-96 bg-background-card rounded-[24px] animate-pulse border border-border-subtle" />
+          ))
+        ) : filteredAcademies.length === 0 ? (
+          <div className="col-span-full py-20 text-center space-y-4">
+            <Users size={48} className="mx-auto text-text-tertiary" />
+            <h3 className="text-xl font-display font-black uppercase text-white">Aucune académie trouvée</h3>
+            <p className="text-text-tertiary">Essayez une autre recherche ou revenez plus tard.</p>
+          </div>
+        ) : filteredAcademies.map((academy, i) => (
           <motion.div
             key={academy.id}
             initial={{ opacity: 0, y: 20 }}
@@ -92,10 +80,10 @@ export default function Academies() {
           >
             <Card className="p-0 overflow-hidden bg-background-card border-border-subtle flex flex-col h-full hover:border-accent-green transition-all group">
                <div className="h-48 bg-background-secondary relative overflow-hidden">
-                  <img src="https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=500&auto=format&fit=crop" className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" alt={academy.name} />
+                  <img src={academy.logoUrl || "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=500&auto=format&fit=crop"} className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" alt={academy.name} />
                   <div className="absolute top-4 left-4">
                      <Badge className="bg-white/10 backdrop-blur-md text-white border-none font-black text-[9px] uppercase tracking-widest h-7 px-3">
-                        {academy.ageRange}
+                        {academy.trainingTime}
                      </Badge>
                   </div>
                </div>
@@ -106,27 +94,24 @@ export default function Academies() {
                         <h3 className="text-2xl font-display font-black uppercase tracking-tight text-white">{academy.name}</h3>
                         <div className="flex items-center gap-1">
                            <Star size={14} fill="#22C55E" className="text-accent-green" />
-                           <span className="text-sm font-black text-white">{academy.rating}</span>
+                           <span className="text-sm font-black text-white">4.8</span>
                         </div>
                      </div>
-                     <p className="flex items-center gap-2 text-text-tertiary text-[10px] font-black uppercase tracking-widest focus-within:text-accent-green">
-                        <MapPin size={12} className="text-accent-green" /> {academy.location}
+                     <p className="flex items-center gap-2 text-text-tertiary text-[10px] font-black uppercase tracking-widest">
+                        <MapPin size={12} className="text-accent-green" /> En Tunisie
                      </p>
                   </div>
 
                   <div className="space-y-3">
-                     {academy.features.map((feature, j) => (
-                        <div key={j} className="flex items-center gap-3 text-xs font-bold text-text-secondary uppercase tracking-tight">
-                           <ShieldCheck size={16} className="text-accent-green shrink-0" />
-                           {feature}
-                        </div>
-                     ))}
+                     <p className="text-text-secondary text-sm line-clamp-3 italic">
+                        {academy.description || "Une académie de football d'élite pour les futurs champions."}
+                     </p>
                   </div>
 
                   <div className="pt-6 border-t border-border-subtle mt-auto space-y-4">
                      <div className="flex justify-between items-end">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Abonnement</p>
-                        <p className="text-sm font-black text-white leading-none">{academy.price}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Disponibilité</p>
+                        <p className="text-sm font-black text-white leading-none">Inscriptions Ouvertes</p>
                      </div>
                      <Button variant="outline" className="w-full h-12 border-border-subtle uppercase font-black text-[10px] tracking-widest gap-2 hover:bg-accent-green hover:text-black hover:border-accent-green transition-all">
                         Détails & Inscription <ArrowRight size={16} />

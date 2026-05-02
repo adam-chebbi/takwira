@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Loader2, 
@@ -8,16 +8,27 @@ import {
   Users, 
   Building2, 
   MapPin, 
-  Check,
-  Smartphone
+  Smartphone,
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
+import { 
+  RecaptchaVerifier, 
+  signInWithPhoneNumber, 
+  ConfirmationResult,
+  signInWithEmailAndPassword
+} from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '@/src/lib/firebase';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
+import { useToast } from '@/src/components/ui/Toast';
+import { UserRole } from '@/src/lib/schema';
 import { cn } from '@/src/lib/utils';
 
-type Step = 'PHONE' | 'OTP' | 'ROLE' | 'SETUP';
+type Step = 'PHONE' | 'OTP' | 'ROLE' | 'SETUP' | 'ADMIN';
 
-const GOVERNORATES = [
+const TUNISIAN_GOVERNORATES = [
   "Tunis", "Ariana", "Ben Arous", "Manouba", "Bizerte", "Nabeul", "Zaghouan", "Béja", 
   "Jendouba", "Le Kef", "Siliana", "Sousse", "Monastir", "Mahdia", "Sfax", "Kairouan", 
   "Kasserine", "Sidi Bouzid", "Gabès", "Médenine", "Tataouine", "Gafsa", "Tozeur", "Kebili"
@@ -25,31 +36,64 @@ const GOVERNORATES = [
 
 export default function Auth() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = React.useState<Step>('PHONE');
   const [phoneNumber, setPhoneNumber] = React.useState('');
-  const [isLoading, setIsLoading] = React.useState(false);
   const [otp, setOtp] = React.useState(['', '', '', '', '', '']);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [confirmationResult, setConfirmationResult] = React.useState<ConfirmationResult | null>(null);
+  const [recaptchaVerifier, setRecaptchaVerifier] = React.useState<RecaptchaVerifier | null>(null);
+  const [isNewUser, setIsNewUser] = React.useState(false);
+  const [shake, setShake] = React.useState(false);
+  
+  // Profile Setup State
+  const [fullName, setFullName] = React.useState('');
+  const [city, setCity] = React.useState('');
+  const [selectedRole, setSelectedRole] = React.useState<UserRole | null>(null);
+
+  // Admin Login State
+  const [adminEmail, setAdminEmail] = React.useState('');
+  const [adminPassword, setAdminPassword] = React.useState('');
+
   const otpRefs = React.useRef<(HTMLInputElement | null)[]>([]);
-  const [countdown, setCountdown] = React.useState(59);
-  const [role, setRole] = React.useState<'PLAYER' | 'MANAGER' | null>(null);
 
-  // OTP Countdown
+  const from = location.state?.from?.pathname || "/";
+
   React.useEffect(() => {
-    let timer: number;
-    if (currentStep === 'OTP' && countdown > 0) {
-      timer = window.setInterval(() => setCountdown(prev => prev - 1), 1000);
-    }
-    return () => clearInterval(timer);
-  }, [currentStep, countdown]);
+    const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible',
+    });
+    setRecaptchaVerifier(verifier);
 
-  const handlePhoneSubmit = (e: React.FormEvent) => {
+    return () => {
+      verifier.clear();
+    };
+  }, []);
+
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (phoneNumber.length !== 8) return;
+    if (phoneNumber.length !== 8 || !recaptchaVerifier) return;
+    
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const formattedPhone = `+216${phoneNumber}`;
+      const result = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifier);
+      setConfirmationResult(result);
       setCurrentStep('OTP');
-    }, 1500);
+      toast.success("Code envoyé !");
+    } catch (error: any) {
+      console.error(error);
+      if (error.code === 'auth/invalid-phone-number') {
+        toast("Numéro de téléphone invalide", 'error');
+      } else if (error.code === 'auth/too-many-requests') {
+        toast("Trop de tentatives. Réessayez plus tard.", 'error');
+      } else {
+        toast("Une erreur est survenue", 'error');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -63,30 +107,95 @@ export default function Auth() {
     }
 
     if (newOtp.every(digit => digit !== '')) {
-      handleOtpSubmit(newOtp.join(''));
+      handleOtpConfirm(newOtp.join(''));
     }
   };
 
-  const handleOtpSubmit = (code: string) => {
+  const handleOtpConfirm = async (code: string) => {
+    if (!confirmationResult) return;
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const result = await confirmationResult.confirm(code);
+      const user = result.user;
+      
+      // Check if user exists in Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        toast(`Content de vous revoir, ${userData.name}`, 'success');
+        if (userData.role === 'manager') navigate('/dashboard');
+        else if (userData.role === 'admin') navigate('/admin');
+        else navigate(from);
+      } else {
+        setIsNewUser(true);
+        setCurrentStep('ROLE');
+      }
+    } catch (error: any) {
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+      toast("Code incorrect", 'error');
+      setOtp(['', '', '', '', '', '']);
+      otpRefs.current[0]?.focus();
+    } finally {
       setIsLoading(false);
-      // For demo, assume first time user
-      setCurrentStep('ROLE');
-    }, 1500);
+    }
   };
 
-  const handleRoleSelect = (selectedRole: 'PLAYER' | 'MANAGER') => {
-    setRole(selectedRole);
-    if (selectedRole === 'PLAYER') {
-      setCurrentStep('SETUP');
-    } else {
-      navigate('/inscription-gerant'); 
+  const handleFinalSetup = async () => {
+    if (!fullName || !city || !selectedRole || !auth.currentUser) return;
+    
+    setIsLoading(true);
+    try {
+      const user = auth.currentUser;
+      const userData = {
+        id: user.uid,
+        phone: user.phoneNumber || '',
+        name: fullName,
+        role: selectedRole,
+        city: city,
+        isActive: true,
+        createdAt: serverTimestamp()
+      };
+      
+      await setDoc(doc(db, 'users', user.uid), userData);
+      
+      toast("Profil créé avec succès !", 'success');
+      
+      if (selectedRole === 'manager') navigate('/inscription-gerant');
+      else navigate('/');
+    } catch (error) {
+      toast.error("Erreur lors de la création du profil");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const result = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
+      
+      if (!userDoc.exists() || userDoc.data()?.role !== 'admin') {
+        await auth.signOut();
+        toast("Accès administrateur requis", 'error');
+        return;
+      }
+      
+      navigate('/admin');
+    } catch (error: any) {
+      toast("Identifiants incorrects", 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-background-primary flex items-center justify-center relative overflow-hidden px-4 py-12">
+      <div id="recaptcha-container"></div>
+      
       {/* Background Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent-green/5 blur-[120px] rounded-full pointer-events-none" />
 
@@ -113,14 +222,14 @@ export default function Auth() {
               className="space-y-8"
             >
               <div className="space-y-2 text-center md:text-left">
-                <h2 className="text-3xl md:text-4xl font-display font-black uppercase tracking-tight leading-none">Bienvenue sur Takwira</h2>
-                <p className="text-text-secondary text-sm font-medium">Connecte-toi ou crée ton compte avec ton numéro tunisien.</p>
+                <h2 className="text-3xl md:text-4xl font-display font-black uppercase tracking-tight leading-none">Connexion</h2>
+                <p className="text-text-secondary text-sm font-medium">Saisis ton numéro pour jouer ou gérer tes terrains.</p>
               </div>
 
               <form onSubmit={handlePhoneSubmit} className="space-y-6">
                 <div className="space-y-2">
                    <div className="relative group">
-                      <div className="absolute left-0 top-0 bottom-0 w-16 bg-background-secondary border-r border-border-subtle rounded-l-xl flex items-center justify-center font-bold text-text-secondary group-focus-within:text-accent-green group-focus-within:border-accent-green/30 transition-all">
+                      <div className="absolute left-0 top-0 bottom-0 w-16 bg-background-secondary border-r border-border-subtle rounded-l-xl flex items-center justify-center font-bold text-text-secondary group-focus-within:text-accent-green transition-all">
                          +216
                       </div>
                       <input 
@@ -130,7 +239,8 @@ export default function Auth() {
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
                         className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl pl-20 pr-4 h-16 font-sans text-xl tracking-[0.2em] font-bold transition-all"
-                        placeholder="00 000 000"
+                        placeholder="00000000"
+                        autoFocus
                       />
                    </div>
                    <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-widest px-1">
@@ -141,11 +251,20 @@ export default function Auth() {
                 <Button 
                   type="submit" 
                   disabled={isLoading || phoneNumber.length !== 8}
-                  className="w-full h-16 text-lg font-black uppercase tracking-widest shadow-2xl shadow-accent-green/20"
+                  className="w-full h-16 text-lg font-black uppercase tracking-widest"
                 >
-                  {isLoading ? <Loader2 className="animate-spin" /> : "Recevoir le code SMS"}
+                  {isLoading ? <Loader2 className="animate-spin" /> : "Continuer"}
                 </Button>
               </form>
+
+              <div className="text-center">
+                <button 
+                  onClick={() => setCurrentStep('ADMIN')}
+                  className="text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-accent-green transition-colors"
+                >
+                  Accès administrateur
+                </button>
+              </div>
             </motion.div>
           )}
 
@@ -159,18 +278,21 @@ export default function Auth() {
             >
               <div className="space-y-2">
                 <button 
-                  onClick={() => setCurrentStep('PHONE')}
+                  onClick={() => {
+                    setCurrentStep('PHONE');
+                    setOtp(['', '', '', '', '', '']);
+                  }}
                   className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-accent-green transition-colors mb-4"
                 >
                   <ArrowLeft size={14} /> Modifier le numéro
                 </button>
-                <h2 className="text-3xl font-display font-black uppercase tracking-tight">Vérifie ton numéro</h2>
+                <h2 className="text-3xl font-display font-black uppercase tracking-tight">Code SMS</h2>
                 <p className="text-text-secondary text-sm font-medium">
-                  Nous avons envoyé un code à <span className="text-white">+216 {phoneNumber}</span>
+                  Saisis le code envoyé au <span className="text-white">+216 {phoneNumber}</span>
                 </p>
               </div>
 
-              <div className="flex justify-between gap-2 md:gap-4">
+              <div className={cn("flex justify-between gap-2 md:gap-4", shake && "animate-shake")}>
                 {otp.map((digit, i) => (
                   <input
                     key={i}
@@ -190,23 +312,21 @@ export default function Auth() {
               </div>
 
               <div className="text-center pt-4">
-                {countdown > 0 ? (
-                  <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">
-                    Renvoyer le code dans {countdown}s
-                  </p>
-                ) : (
-                  <button className="text-[10px] font-black uppercase tracking-widest text-accent-green hover:underline">
-                    Renvoyer le code
-                  </button>
-                )}
+                <button 
+                  onClick={() => setConfirmationResult(null)} // This would trigger a resend if implemented
+                  className="text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-accent-green transition-colors disabled:opacity-50"
+                  disabled={isLoading}
+                >
+                  Je n'ai pas reçu le code
+                </button>
               </div>
 
               <Button 
-                onClick={() => handleOtpSubmit(otp.join(''))}
+                onClick={() => handleOtpConfirm(otp.join(''))}
                 disabled={isLoading || otp.some(d => d === '')}
                 className="w-full h-16 font-black uppercase tracking-widest"
               >
-                {isLoading ? <Loader2 className="animate-spin" /> : "Vérifier"}
+                {isLoading ? <Loader2 className="animate-spin" /> : "Vérifier le code"}
               </Button>
             </motion.div>
           )}
@@ -220,40 +340,50 @@ export default function Auth() {
               className="space-y-8"
             >
               <div className="text-center md:text-left space-y-1">
-                <h2 className="text-3xl font-display font-black uppercase tracking-tight">Tu es...</h2>
-                <p className="text-text-secondary text-sm font-medium">Ton aventure Takwira commence ici.</p>
+                <h2 className="text-3xl font-display font-black uppercase tracking-tight">Bienvenue !</h2>
+                <p className="text-text-secondary text-sm font-medium">Quel est ton rôle sur Takwira ?</p>
               </div>
 
               <div className="space-y-4">
                  <button 
-                  onClick={() => handleRoleSelect('PLAYER')}
+                  onClick={() => {
+                    setSelectedRole('player');
+                    setCurrentStep('SETUP');
+                  }}
                   className="w-full group outline-none"
                  >
-                   <Card className="p-6 md:p-8 flex items-center gap-6 border-border-subtle hover:border-accent-green transition-all group-hover:scale-[1.02] active:scale-[0.98]">
+                   <Card className={cn(
+                     "p-6 md:p-8 flex items-center gap-6 border-border-subtle transition-all group-hover:scale-[1.02] active:scale-[0.98]",
+                     selectedRole === 'player' && "border-accent-green bg-accent-green/5"
+                   )}>
                       <div className="w-16 h-16 rounded-2xl bg-accent-green/10 flex items-center justify-center text-accent-green group-hover:bg-accent-green group-hover:text-black transition-colors">
                          <Users size={32} />
                       </div>
                       <div className="text-left space-y-1">
-                         <h4 className="font-display font-black uppercase tracking-tight text-xl leading-none">Joueur / Organisateur</h4>
-                         <p className="text-xs text-text-secondary leading-tight">Je veux organiser des matchs et rejoindre des parties.</p>
+                         <h4 className="font-display font-black uppercase tracking-tight text-xl leading-none">Joueur</h4>
+                         <p className="text-xs text-text-secondary leading-tight">Je veux réserver des terrains et participer à des matchs.</p>
                       </div>
-                      <ChevronRight className="ml-auto text-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity" />
                    </Card>
                  </button>
 
                  <button 
-                  onClick={() => handleRoleSelect('MANAGER')}
+                  onClick={() => {
+                    setSelectedRole('manager');
+                    setCurrentStep('SETUP');
+                  }}
                   className="w-full group outline-none"
                  >
-                   <Card className="p-6 md:p-8 flex items-center gap-6 border-border-subtle hover:border-accent-green transition-all group-hover:scale-[1.02] active:scale-[0.98]">
+                   <Card className={cn(
+                     "p-6 md:p-8 flex items-center gap-6 border-border-subtle transition-all group-hover:scale-[1.02] active:scale-[0.98]",
+                     selectedRole === 'manager' && "border-accent-green bg-accent-green/5"
+                   )}>
                       <div className="w-16 h-16 rounded-2xl bg-background-secondary border border-border-subtle flex items-center justify-center text-text-tertiary group-hover:bg-accent-green group-hover:text-black transition-colors">
                          <Building2 size={32} />
                       </div>
                       <div className="text-left space-y-1">
-                         <h4 className="font-display font-black uppercase tracking-tight text-xl leading-none">Gérant de complexe</h4>
-                         <p className="text-xs text-text-secondary leading-tight">Je gère un ou plusieurs terrains de football.</p>
+                         <h4 className="font-display font-black uppercase tracking-tight text-xl leading-none">Gérant</h4>
+                         <p className="text-xs text-text-secondary leading-tight">Je possède un complexe et je souhaite gérer mes réservations.</p>
                       </div>
-                      <ChevronRight className="ml-auto text-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity" />
                    </Card>
                  </button>
               </div>
@@ -269,13 +399,19 @@ export default function Auth() {
               className="space-y-8"
             >
               <div className="text-center md:text-left space-y-1">
+                <button 
+                  onClick={() => setCurrentStep('ROLE')}
+                  className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-accent-green mb-4"
+                >
+                  <ArrowLeft size={12} /> Retour
+                </button>
                 <h2 className="text-3xl font-display font-black uppercase tracking-tight text-accent-green">Dernière étape</h2>
-                <p className="text-text-secondary text-sm font-medium">Complète ton profil pour rejoindre le terrain.</p>
+                <p className="text-text-secondary text-sm font-medium">Complète ton profil pour t'inscrire.</p>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-5">
                 <div className="space-y-2">
-                   <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary ml-1">Ton prénom</label>
+                   <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary ml-1">Ton nom complet</label>
                    <div className="relative group">
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary group-focus-within:text-accent-green transition-colors">
                          <Smartphone size={18} />
@@ -283,8 +419,10 @@ export default function Auth() {
                       <input 
                         type="text"
                         required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
                         className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl pl-12 pr-4 h-14 font-sans text-sm transition-all"
-                        placeholder="Ahmed, Skander..."
+                        placeholder="Ahmed Ben Ali"
                       />
                    </div>
                 </div>
@@ -296,10 +434,12 @@ export default function Auth() {
                          <MapPin size={18} />
                       </div>
                       <select 
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
                         className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl pl-12 pr-4 h-14 font-sans text-sm appearance-none transition-all"
                       >
                          <option value="">Sélectionne ta ville</option>
-                         {GOVERNORATES.map(gov => (
+                         {TUNISIAN_GOVERNORATES.map(gov => (
                            <option key={gov} value={gov}>{gov}</option>
                          ))}
                       </select>
@@ -307,24 +447,90 @@ export default function Auth() {
                 </div>
               </div>
 
-              <div className="space-y-4 pt-4">
-                 <Button 
-                   onClick={() => navigate('/profil')}
-                   className="w-full h-16 font-black uppercase tracking-widest"
-                 >
-                   Terminer <ChevronRight size={18} />
-                 </Button>
-                 <button 
-                  onClick={() => navigate('/profil')}
-                  className="w-full text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-white"
-                 >
-                   Plus tard
-                 </button>
+              <Button 
+                onClick={handleFinalSetup}
+                disabled={isLoading || !fullName || !city}
+                className="w-full h-16 font-black uppercase tracking-widest"
+              >
+                {isLoading ? <Loader2 className="animate-spin" /> : "Commencer l'aventure"}
+              </Button>
+            </motion.div>
+          )}
+
+          {currentStep === 'ADMIN' && (
+            <motion.div 
+              key="admin"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 20, opacity: 0 }}
+              className="space-y-8"
+            >
+              <div className="space-y-2">
+                <button 
+                  onClick={() => setCurrentStep('PHONE')}
+                  className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-accent-green transition-colors mb-4"
+                >
+                  <ArrowLeft size={14} /> Retour
+                </button>
+                <div className="flex items-center gap-3">
+                   <div className="w-10 h-10 rounded-lg bg-accent-green/10 flex items-center justify-center text-accent-green">
+                      <ShieldCheck size={24} />
+                   </div>
+                   <h2 className="text-3xl font-display font-black uppercase tracking-tight">Admin</h2>
+                </div>
               </div>
+
+              <form onSubmit={handleAdminLogin} className="space-y-6">
+                <div className="space-y-4">
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary ml-1">Email</label>
+                      <input 
+                        type="email"
+                        required
+                        value={adminEmail}
+                        onChange={(e) => setAdminEmail(e.target.value)}
+                        className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl px-4 h-14 font-sans text-sm transition-all"
+                      />
+                   </div>
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary ml-1">Mot de passe</label>
+                      <div className="relative group">
+                         <input 
+                           type="password"
+                           required
+                           value={adminPassword}
+                           onChange={(e) => setAdminPassword(e.target.value)}
+                           className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl px-4 h-14 font-sans text-sm transition-all"
+                         />
+                         <Lock className="absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
+                      </div>
+                   </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  disabled={isLoading}
+                  className="w-full h-16 font-black uppercase tracking-widest bg-white text-black hover:bg-accent-green transition-colors"
+                >
+                  {isLoading ? <Loader2 className="animate-spin" /> : "Connexion Admin"}
+                </Button>
+              </form>
             </motion.div>
           )}
         </AnimatePresence>
       </Card>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-8px); }
+          50% { transform: translateX(8px); }
+          75% { transform: translateX(-8px); }
+        }
+        .animate-shake {
+          animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+      `}} />
     </div>
   );
 }

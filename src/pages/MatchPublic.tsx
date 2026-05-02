@@ -122,8 +122,14 @@ const CountdownTimer = ({ targetDate }: { targetDate: string }) => {
   );
 };
 
+import { useMatch } from '@/src/hooks/useMatch';
+import { useAuth } from '@/src/contexts/AuthContext';
+import MatchChat from '@/src/components/match/MatchChat';
+
 export default function MatchPublic() {
   const { token } = useParams();
+  const { user, userProfile } = useAuth();
+  const { match, isLoading: matchLoading } = useMatch(token);
   const [players, setPlayers] = React.useState<Player[]>(INITIAL_PLAYERS);
   const [isCheckInOpen, setIsCheckInOpen] = React.useState(false);
   const [hasJoined, setHasJoined] = React.useState(false);
@@ -162,9 +168,20 @@ export default function MatchPublic() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  if (matchLoading) {
+    return (
+      <div className="min-h-screen bg-background-primary flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-accent-green animate-spin" />
+      </div>
+    );
+  }
+
+  const effectiveMatchId = match?.id || token || 'demo';
+
   return (
-    <div className="min-h-screen bg-background-primary pt-20 pb-32">
-      {/* Hero Section */}
+    <div className="min-h-screen bg-background-primary flex">
+      <div className="flex-1 pt-20 pb-32 overflow-y-auto">
+        {/* Hero Section */}
       <section className="bg-background-card border-b border-border-subtle py-8 md:py-12 overflow-hidden relative">
         <div className="max-w-5xl mx-auto px-4 md:px-8">
           <nav className="mb-6 flex items-center gap-2 text-[10px] uppercase font-black tracking-widest text-text-secondary">
@@ -587,13 +604,19 @@ export default function MatchPublic() {
         )}
       </AnimatePresence>
 
+      <MatchChat 
+        matchId={effectiveMatchId} 
+        currentUser={user} 
+        userProfile={userProfile} 
+      />
+
       <style>{`
         .inset-center {
            left: 50%;
            transform: translate(-50%, -50%);
         }
       `}</style>
-
+      </div>
     </div>
   );
 }

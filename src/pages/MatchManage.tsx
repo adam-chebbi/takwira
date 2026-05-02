@@ -120,8 +120,14 @@ function SortablePlayerChip({ player, isDragging }: SortablePlayerChipProps) {
   );
 }
 
+import { useAuth } from '@/src/contexts/AuthContext';
+import { useMatch } from '@/src/hooks/useMatch';
+import MatchChat from '@/src/components/match/MatchChat';
+
 export default function MatchManage() {
   const { token } = useParams();
+  const { user, userProfile } = useAuth();
+  const { match, isLoading: matchLoading } = useMatch(token);
   const navigate = useNavigate();
   const [isCheckingAuth, setIsCheckingAuth] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<'players' | 'teams'>('players');
@@ -261,7 +267,7 @@ export default function MatchManage() {
     setPlayers(prev => prev.map(p => ({ ...p, team: undefined })));
   };
 
-  if (isCheckingAuth) {
+  if (isCheckingAuth || matchLoading) {
     return (
       <div className="min-h-screen pt-32 pb-20 bg-background-primary px-4">
         <div className="max-w-4xl mx-auto space-y-8 animate-pulse text-center">
@@ -278,9 +284,12 @@ export default function MatchManage() {
     );
   }
 
+  const effectiveMatchId = match?.id || token || 'demo';
+
   return (
-    <div className="min-h-screen pt-24 pb-32 bg-background-primary overflow-x-hidden">
-      <div className="max-w-5xl mx-auto px-4 md:px-8">
+    <div className="min-h-screen bg-background-primary flex">
+      <div className="flex-1 pt-24 pb-32 overflow-y-auto">
+        <div className="max-w-5xl mx-auto px-4 md:px-8">
         
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
@@ -717,7 +726,15 @@ export default function MatchManage() {
            </div>
         </section>
 
+        </div>
       </div>
+
+    <MatchChat 
+      matchId={effectiveMatchId} 
+      currentUser={user} 
+      userProfile={userProfile} 
+      isOrganizer={true}
+    />
 
       {/* Manual Add Player Modal */}
       <AnimatePresence>

@@ -6,16 +6,11 @@ import { Button } from '@/src/components/ui/Button';
 import { Badge } from '@/src/components/ui/Badge';
 import { NavLink } from 'react-router-dom';
 import { SEO } from '@/src/components/layout/SEO';
-
-const MOCK_MATCHES = [
-  { id: '1', title: 'Match Matinal 5v5', location: 'Gammarth Foot Center', date: '22 Mai', time: '08:00', spots: 3, totalSpots: 10, level: 'Amateur', price: 10 },
-  { id: '2', title: 'Derby du Vendredi', location: 'Carthage Sports', date: '22 Mai', time: '19:00', spots: 1, totalSpots: 14, level: 'Intermédiaire', price: 15 },
-  { id: '3', title: 'Match Détente', location: 'La Marsa Foot', date: '23 Mai', time: '21:00', spots: 5, totalSpots: 10, level: 'Débutant', price: 8 },
-  { id: '4', title: 'Elite Session', location: 'Lac 1 Indoor', date: '23 Mai', time: '20:00', spots: 2, totalSpots: 10, level: 'Pro', price: 20 },
-];
+import { useMatches } from '@/src/hooks/useMatches';
 
 export default function Matches() {
   const [filter, setFilter] = React.useState('all');
+  const { matches, isLoading } = useMatches({ status: 'upcoming' });
 
   return (
     <div className="pt-32 pb-20 px-6 md:px-12 max-w-7xl mx-auto space-y-12">
@@ -25,7 +20,7 @@ export default function Matches() {
           <h1 className="text-5xl md:text-7xl font-display font-black uppercase tracking-tight leading-none text-white">
             Matchs <span className="text-accent-green">Ouverts</span>
           </h1>
-          <p className="text-text-secondary text-lg max-w-xl font-medium">
+          <p className="text-text-secondary text-lg font-medium max-w-xl">
             Trouve une équipe et rejoins un match près de chez toi. Plus besoin d'attendre 9 amis pour jouer.
           </p>
         </div>
@@ -59,14 +54,24 @@ export default function Matches() {
           <input 
             type="text" 
             placeholder="Ville, complexe ou niveau..."
-            className="w-full bg-background-secondary border border-border-subtle rounded-2xl h-14 pl-12 pr-6 outline-none focus:border-accent-green transition-all"
+            className="w-full bg-background-secondary border border-border-subtle rounded-2xl h-14 pl-12 pr-6 outline-none focus:border-accent-green transition-all text-white"
           />
         </div>
       </div>
 
       {/* Matches Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {MOCK_MATCHES.map((match, i) => (
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-80 bg-background-card rounded-[24px] animate-pulse border border-border-subtle" />
+          ))
+        ) : matches.length === 0 ? (
+          <div className="col-span-full py-20 text-center space-y-4">
+            <Users size={48} className="mx-auto text-text-tertiary" />
+            <h3 className="text-xl font-display font-black uppercase text-white">Aucun match trouvé</h3>
+            <p className="text-text-tertiary">Il n'y a pas de match ouvert pour le moment.</p>
+          </div>
+        ) : matches.map((match, i) => (
           <motion.div 
             key={match.id}
             initial={{ opacity: 0, y: 20 }}
@@ -76,11 +81,10 @@ export default function Matches() {
             <Card className="group relative overflow-hidden bg-background-card border-border-subtle hover:border-accent-green/50 transition-all p-8 flex flex-col items-start gap-6">
               <div className="flex justify-between w-full items-start">
                 <Badge className="bg-accent-green/10 text-accent-green border-none font-black text-[9px] uppercase tracking-widest h-7 px-3">
-                  {match.level}
+                  Match Amical
                 </Badge>
                 <div className="text-right">
-                  <p className="text-2xl font-display font-black text-white">{match.price} DT</p>
-                  <p className="text-[9px] font-black uppercase text-text-tertiary tracking-widest">Par personne</p>
+                  <p className="text-2xl font-display font-black text-white">{match.format}</p>
                 </div>
               </div>
 
@@ -90,14 +94,14 @@ export default function Matches() {
                 </h3>
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2 text-text-secondary text-xs font-bold uppercase tracking-wide">
-                    <MapPin size={14} className="text-accent-green" /> {match.location}
+                     {match.organizerName}
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 text-text-secondary text-xs font-bold uppercase tracking-wide">
                       <Calendar size={14} className="text-accent-green" /> {match.date}
                     </div>
                     <div className="flex items-center gap-2 text-text-secondary text-xs font-bold uppercase tracking-wide">
-                      <Clock size={14} className="text-accent-green" /> {match.time}
+                      <Clock size={14} className="text-accent-green" /> {match.startTime}
                     </div>
                   </div>
                 </div>
@@ -107,22 +111,22 @@ export default function Matches() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-end">
                     <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">
-                      Places restantes : <span className="text-accent-green">{match.spots}</span>
+                      Joueurs inscrits
                     </p>
                     <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">
-                      {match.totalSpots - match.spots}/{match.totalSpots}
+                      {(match.teamA?.length || 0) + (match.teamB?.length || 0)}/{match.maxPlayers}
                     </p>
                   </div>
                   <div className="h-1.5 w-full bg-background-secondary rounded-full overflow-hidden border border-border-subtle">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${((match.totalSpots - match.spots) / match.totalSpots) * 100}%` }}
+                      animate={{ width: `${(((match.teamA?.length || 0) + (match.teamB?.length || 0)) / match.maxPlayers) * 100}%` }}
                       className="h-full bg-accent-green shadow-[0_0_10px_rgba(34,197,94,0.5)]"
                     />
                   </div>
                 </div>
                 
-                <NavLink to={`/match/${match.id}`} className="block">
+                <NavLink to={`/match/${match.linkToken}`} className="block w-full">
                   <Button className="w-full h-12 uppercase font-black text-[10px] tracking-widest gap-2 bg-background-secondary border border-border-subtle hover:bg-accent-green hover:text-black transition-all">
                     Rejoindre <Users size={16} />
                   </Button>
@@ -135,3 +139,4 @@ export default function Matches() {
     </div>
   );
 }
+

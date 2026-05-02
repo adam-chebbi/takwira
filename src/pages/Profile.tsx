@@ -44,7 +44,7 @@ const Counter = ({ target, duration = 1.5 }: { target: number, duration?: number
   return <>{count}</>;
 };
 
-const MatchTicket = ({ match, type }: { match: any, type: 'upcoming' | 'history' }) => {
+const MatchTicket: React.FC<{ match: any, type: 'upcoming' | 'history' }> = ({ match, type }) => {
   return (
     <div className={cn(
       "group relative overflow-hidden bg-background-card border border-border-subtle rounded-2xl transition-all hover:border-accent-green/30",
@@ -98,14 +98,36 @@ const MatchTicket = ({ match, type }: { match: any, type: 'upcoming' | 'history'
   );
 };
 
+import { useAuth } from '@/src/contexts/AuthContext';
+import { useReservations } from '@/src/hooks/useReservations';
+import { db, auth as firebaseAuth } from '@/src/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+
 export default function Profile() {
+  const { user, userProfile, signOut } = useAuth();
   const [activeTab, setActiveTab] = React.useState<'matchs' | 'favoris' | 'config'>('matchs');
   const [matchTab, setMatchTab] = React.useState<'avenir' | 'histo'>('avenir');
-  const [pushEnabled, setPushEnabled] = React.useState(true);
-  const [smsEnabled, setSmsEnabled] = React.useState(false);
+  
+  const { reservations, isLoading: reservationsLoading } = useReservations({ 
+    organizerId: user?.uid 
+  });
+
+  const upcomingMatches = reservations.filter(r => r.status !== 'cancelled' && new Date(r.date) >= new Date());
+  const pastMatches = reservations.filter(r => r.status === 'cancelled' || new Date(r.date) < new Date());
+
+  const handleUpdateProfile = async (field: string, value: string) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { [field]: value });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+    }
+  };
+
+  if (!user || !userProfile) return null;
 
   return (
-    <div className="min-h-screen bg-background-primary pt-32 pb-32">
+    <div className="min-h-screen bg-background-primary pt-32 pb-32 text-white">
       <div className="max-w-4xl mx-auto px-4 md:px-8">
         
         {/* Profile Header */}
@@ -118,9 +140,13 @@ export default function Profile() {
               </div>
               
               <div className="w-24 h-24 md:w-32 md:h-32 rounded-full relative z-10 p-2 overflow-hidden bg-background-card">
-                 <div className="w-full h-full rounded-full bg-purple-500 flex items-center justify-center text-3xl md:text-5xl font-display font-black text-white uppercase select-none">
-                    AS
-                 </div>
+                 {userProfile.avatarUrl ? (
+                   <img src={userProfile.avatarUrl} className="w-full h-full rounded-full object-cover" alt={userProfile.name} />
+                 ) : (
+                   <div className="w-full h-full rounded-full bg-accent-green flex items-center justify-center text-3xl md:text-5xl font-display font-black text-black uppercase select-none">
+                      {userProfile.name.charAt(0)}
+                   </div>
+                 )}
               </div>
               
               <button className="absolute bottom-2 right-2 z-20 w-8 h-8 rounded-full bg-background-card border border-border-subtle flex items-center justify-center text-text-tertiary hover:text-accent-green hover:scale-110 transition-all shadow-xl">
@@ -129,11 +155,11 @@ export default function Profile() {
            </div>
 
            <div className="space-y-1">
-              <h1 className="text-3xl md:text-4xl font-display font-black uppercase tracking-tight">Ahmed Skander</h1>
+              <h1 className="text-3xl md:text-4xl font-display font-black uppercase tracking-tight">{userProfile.name}</h1>
               <div className="flex items-center justify-center gap-2 text-text-secondary text-sm font-medium">
-                 <MapPin size={16} className="text-accent-green" /> Tunis, Ariana
+                 <MapPin size={16} className="text-accent-green" /> {userProfile.city || 'Tunisie'}
                  <span className="w-1.5 h-1.5 rounded-full bg-border-subtle" />
-                 <Badge className="bg-accent-green/10 text-accent-green border-accent-green/20 uppercase font-black text-[9px] tracking-widest h-6">Organisateur</Badge>
+                 <Badge className="bg-accent-green/10 text-accent-green border-accent-green/20 uppercase font-black text-[9px] tracking-widest h-6">{userProfile.role}</Badge>
               </div>
            </div>
         </div>
@@ -141,9 +167,9 @@ export default function Profile() {
         {/* Stats Panel */}
         <div className="grid grid-cols-3 gap-3 md:gap-6 mb-16 px-2 md:px-0">
            {[
-             { label: "Matches Joués", count: 24, icon: Trophy, color: "text-accent-green" },
-             { label: "Organisés", count: 6, icon: Users, color: "text-white" },
-             { label: "Terrains", count: 12, icon: MapPin, color: "text-text-tertiary" }
+             { label: "Matches Participés", count: reservations.length, icon: Trophy, color: "text-accent-green" },
+             { label: "Villes Visités", count: 1, icon: Users, color: "text-white" },
+             { label: "Terrains Favoris", count: 0, icon: MapPin, color: "text-text-tertiary" }
            ].map((stat, i) => (
              <Card key={i} className="p-4 md:p-6 text-center space-y-2 group overflow-hidden border-border-subtle relative">
                 <div className="absolute inset-0 bg-accent-green/[0.03] opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -212,17 +238,18 @@ export default function Profile() {
                  </div>
 
                  <div className="grid gap-6">
-                    {matchTab === 'avenir' ? (
-                       <>
-                         <MatchTicket type="upcoming" match={{ id: 'TKW-9821', terrain: 'Foot Center Gammarth', location: 'Gammarth, Tunis', players: '12/14' }} />
-                         <MatchTicket type="upcoming" match={{ id: 'TKW-9825', terrain: 'Wadi Foot', location: 'Marsa, Tunis', players: '6/12' }} />
-                       </>
-                    ) : (
-                       <>
-                         <MatchTicket type="history" match={{ id: 'TKW-8012', terrain: 'Complex Sportif Ariana', location: 'Ariana', players: '14/14' }} />
-                         <MatchTicket type="history" match={{ id: 'TKW-7954', terrain: 'Foot Center Gammarth', location: 'Gammarth', players: '12/12' }} />
-                       </>
-                    )}
+                    {reservationsLoading ? (
+                      Array.from({ length: 2 }).map((_, i) => (
+                        <div key={i} className="h-32 bg-background-card rounded-2xl animate-pulse border border-border-subtle" />
+                      ))
+                    ) : (matchTab === 'avenir' ? upcomingMatches : pastMatches).length === 0 ? (
+                      <div className="py-20 text-center space-y-4">
+                        <Trophy size={48} className="mx-auto text-text-tertiary" />
+                        <h3 className="text-xl font-display font-black uppercase text-white">Aucun match trouvé</h3>
+                      </div>
+                    ) : (matchTab === 'avenir' ? upcomingMatches : pastMatches).map(res => (
+                      <MatchTicket key={res.id} type={matchTab === 'avenir' ? 'upcoming' : 'history'} match={{ id: res.id, terrain: res.organizerName, location: res.date, players: 'N/A' }} />
+                    ))}
                  </div>
                </motion.div>
              )}
@@ -233,31 +260,11 @@ export default function Profile() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                  className="py-20 text-center space-y-4"
                 >
-                   {/* This would reuse the actual terrain cards, but simplified for profile */}
-                   {[1, 2].map((i) => (
-                      <Card key={i} className="group overflow-hidden rounded-[24px] border-border-subtle">
-                         <div className="relative aspect-[16/10] bg-background-secondary overflow-hidden">
-                            <div className="absolute top-4 right-4 z-20">
-                               <button className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-accent-green shadow-xl">
-                                  <Heart size={20} fill="currentColor" />
-                               </button>
-                            </div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
-                            <div className="absolute bottom-4 left-4 z-20 space-y-1">
-                               <h4 className="text-lg font-display font-black uppercase text-white">Wadi Foot Gammarth</h4>
-                               <p className="flex items-center gap-1 text-[10px] font-bold text-white/70 uppercase">
-                                  <MapPin size={12} /> Gammarth, Tunis
-                               </p>
-                            </div>
-                         </div>
-                         <div className="p-4 flex items-center justify-between bg-background-card">
-                            <span className="text-xl font-display font-black text-accent-green">50 DT <span className="text-[10px] text-text-tertiary">/H</span></span>
-                            <Button size="sm" className="h-9 px-4 text-[10px] font-black uppercase tracking-widest">Réserver</Button>
-                         </div>
-                      </Card>
-                   ))}
+                   <Heart size={48} className="mx-auto text-text-tertiary" />
+                   <h3 className="text-xl font-display font-black uppercase text-white">Aucun favori</h3>
+                   <p className="text-text-tertiary">Ajoutez des terrains à vos favoris pour les retrouver ici.</p>
                 </motion.div>
              )}
 
@@ -270,80 +277,35 @@ export default function Profile() {
                   className="space-y-6"
                 >
                    <Card className="divide-y divide-border-subtle bg-background-card overflow-hidden">
-                      <SettingRow icon={User} label="Nom et Prénom" value="Ahmed Skander" onEdit={() => {}} />
-                      <SettingRow icon={Phone} label="Numéro de téléphone" value="+216 ** *** 821" onEdit={() => {}} />
-                      <SettingRow icon={MapPin} label="Ville" value="Tunis, Ariana" onEdit={() => {}} />
-                      <SettingRow icon={Globe} label="Langue" value="Français / العربية" onEdit={() => {}} isToggle />
+                      <SettingRow 
+                        icon={User} 
+                        label="Nom et Prénom" 
+                        value={userProfile.name} 
+                        onEdit={() => {
+                          const newName = prompt("Nouveau nom:", userProfile.name);
+                          if (newName) handleUpdateProfile('name', newName);
+                        }} 
+                      />
+                      <SettingRow icon={Phone} label="Numéro de téléphone" value={userProfile.phone} onEdit={() => {}} />
+                      <SettingRow 
+                        icon={MapPin} 
+                        label="Ville" 
+                        value={userProfile.city || 'Non renseigné'} 
+                        onEdit={() => {
+                          const newCity = prompt("Nouvelle ville:", userProfile.city);
+                          if (newCity) handleUpdateProfile('city', newCity);
+                        }} 
+                      />
                    </Card>
-
-                   <Card className="divide-y divide-border-subtle bg-background-card overflow-hidden">
-                      <div className="px-6 py-5 flex items-center justify-between group">
-                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-background-secondary flex items-center justify-center text-text-tertiary group-hover:text-accent-green transition-colors">
-                               <Bell size={20} />
-                            </div>
-                            <div className="space-y-0.5">
-                               <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Notifications Push</p>
-                               <p className="text-xs font-bold">Inscriptions, matchs, alertes</p>
-                            </div>
-                         </div>
-                         <button 
-                           onClick={() => setPushEnabled(!pushEnabled)}
-                           className={cn(
-                             "w-12 h-6 rounded-full relative transition-colors duration-300",
-                             pushEnabled ? "bg-accent-green" : "bg-background-secondary border border-border-subtle"
-                           )}
-                         >
-                            <motion.div 
-                              animate={{ x: pushEnabled ? 26 : 4 }}
-                              className={cn("absolute top-1 w-4 h-4 rounded-full shadow-md", pushEnabled ? "bg-black" : "bg-text-tertiary")} 
-                            />
-                         </button>
-                      </div>
-
-                      <div className="px-6 py-5 flex items-center justify-between group">
-                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-background-secondary flex items-center justify-center text-text-tertiary group-hover:text-accent-green transition-colors">
-                               <CheckCircle2 size={20} />
-                            </div>
-                            <div className="space-y-0.5">
-                               <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Notifications SMS</p>
-                               <p className="text-xs font-bold">Important uniquement</p>
-                            </div>
-                         </div>
-                         <button 
-                           onClick={() => setSmsEnabled(!smsEnabled)}
-                           className={cn(
-                             "w-12 h-6 rounded-full relative transition-colors duration-300",
-                             smsEnabled ? "bg-accent-green" : "bg-background-secondary border border-border-subtle"
-                           )}
-                         >
-                            <motion.div 
-                              animate={{ x: smsEnabled ? 26 : 4 }}
-                              className={cn("absolute top-1 w-4 h-4 rounded-full shadow-md", smsEnabled ? "bg-black" : "bg-text-tertiary")} 
-                            />
-                         </button>
-                      </div>
-                   </Card>
-
-                   <div className="space-y-3">
-                      <button className="w-full flex items-center justify-between px-6 py-4 bg-background-secondary/30 rounded-2xl group border border-transparent hover:border-border-subtle transition-all">
-                         <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Politique de confidentialité</span>
-                         <ExternalLink size={16} className="text-text-tertiary group-hover:text-white transition-colors" />
-                      </button>
-                      <button className="w-full flex items-center justify-between px-6 py-4 bg-background-secondary/30 rounded-2xl group border border-transparent hover:border-border-subtle transition-all">
-                         <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Conditions d'utilisation</span>
-                         <ExternalLink size={14} className="text-text-tertiary group-hover:text-white transition-colors" />
-                      </button>
-                   </div>
 
                    <div className="pt-8 space-y-4">
-                      <Button variant="outline" className="w-full h-14 border-danger/30 text-danger hover:bg-danger-hover hover:text-white gap-3 font-black uppercase tracking-widest text-xs">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => signOut()}
+                        className="w-full h-14 border-danger/30 text-danger hover:bg-danger-hover hover:text-white gap-3 font-black uppercase tracking-widest text-xs"
+                      >
                          <LogOut size={18} /> Se déconnecter
                       </Button>
-                      <button className="w-full text-center text-text-tertiary text-[10px] font-black uppercase tracking-[0.2em] hover:text-danger hover:underline">
-                         Supprimer mon compte
-                      </button>
                    </div>
                 </motion.div>
              )}

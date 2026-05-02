@@ -1,0 +1,139 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user profiles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "phone": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["player", "manager", "admin"] },
+        "city": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "phone", "name", "role", "city", "createdAt", "isActive"]
+    },
+    "Complex": {
+      "title": "Complex",
+      "description": "Football complexes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "managerId": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "governorate": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "photos": { "type": "array", "items": { "type": "string" } },
+        "description": { "type": "string" },
+        "openingTime": { "type": "string" },
+        "closingTime": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "managerId", "name", "address", "city", "governorate", "lat", "lng", "isVerified", "isActive", "createdAt"]
+    },
+    "Terrain": {
+      "title": "Terrain",
+      "description": "Individual football pitches within a complex",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "complexId": { "type": "string" },
+        "complexName": { "type": "string" },
+        "managerId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["6v6", "7v7"] },
+        "maxPlayers": { "type": "number" },
+        "amenities": { "type": "array", "items": { "type": "string" } },
+        "photos": { "type": "array", "items": { "type": "string" } },
+        "pricePerHour": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Reservation": {
+      "title": "Reservation",
+      "description": "Terrain booking records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "terrainId": { "type": "string" },
+        "complexId": { "type": "string" },
+        "managerId": { "type": "string" },
+        "organizerId": { "type": "string" },
+        "organizerName": { "type": "string" },
+        "organizerPhone": { "type": "string" },
+        "matchTitle": { "type": "string" },
+        "date": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] },
+        "isRecurring": { "type": "boolean" },
+        "recurrenceId": { "type": "string" },
+        "internalNote": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles by UID"
+    },
+    "complexes/{complexId}": {
+      "schema": "Complex",
+      "description": "Listing of all complexes"
+    },
+    "terrains/{terrainId}": {
+      "schema": "Terrain",
+      "description": "Listing of all terrains"
+    },
+    "reservations/{reservationId}": {
+      "schema": "Reservation",
+      "description": "Bookings for terrains"
+    },
+    "recurrences/{recurrenceId}": {
+      "schema": "Recurrence",
+      "description": "Recurring bookings"
+    },
+    "matches/{matchId}": {
+      "schema": "Match",
+      "description": "Public matches"
+    },
+    "matchPlayers/{playerId}": {
+      "schema": "MatchPlayer",
+      "description": "Players in matches"
+    },
+    "matchMessages/{messageId}": {
+      "schema": "MatchMessage",
+      "description": "Chat messages per match"
+    },
+    "academies/{academyId}": {
+      "schema": "Academy",
+      "description": "Football academies"
+    },
+    "academyMembers/{memberId}": {
+      "schema": "AcademyMember",
+      "description": "Registered students in academies"
+    },
+    "blogPosts/{postId}": {
+      "schema": "BlogPost",
+      "description": "Blog content"
+    },
+    "adSlots/{adId}": {
+      "schema": "AdSlot",
+      "description": "Advertisement placements"
+    },
+    "notifications/{notificationId}": {
+      "schema": "AppNotification",
+      "description": "User specific notifications"
+    }
+  }
+}

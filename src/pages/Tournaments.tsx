@@ -6,46 +6,11 @@ import { Button } from '@/src/components/ui/Button';
 import { Badge } from '@/src/components/ui/Badge';
 import { SEO } from '@/src/components/layout/SEO';
 
-const MOCK_TOURNAMENTS = [
-  { 
-    id: '1', 
-    title: 'Tunis Summer Cup 2026', 
-    location: 'Gammarth Sport Village', 
-    date: '15-20 Juin', 
-    price: 350, 
-    format: '7v7',
-    teams: 16,
-    maxTeams: 24,
-    prize: '5,000 DT',
-    level: 'Open'
-  },
-  { 
-    id: '2', 
-    title: 'Corporate League Business', 
-    location: 'Lac 2 Indoor', 
-    date: '1 Juillet', 
-    price: 800, 
-    format: '5v5',
-    teams: 10,
-    maxTeams: 12,
-    prize: 'Trophée + Voyage',
-    level: 'Entreprise'
-  },
-  { 
-    id: '3', 
-    title: 'U18 Academy Stars', 
-    location: 'Menzah 6', 
-    date: '10 Juillet', 
-    price: 150, 
-    format: '11v11',
-    teams: 8,
-    maxTeams: 8,
-    prize: 'Equipement Sportif',
-    level: 'U18'
-  },
-];
+import { useTournaments } from '@/src/hooks/useTournaments';
 
 export default function Tournaments() {
+  const { tournaments, isLoading } = useTournaments();
+
   return (
     <div className="pt-32 pb-20 px-6 md:px-12 max-w-7xl mx-auto space-y-16">
       <SEO title="Tournois de Foot | Takwira.com" description="Participe aux tournois de football les plus excitants en Tunisie. Inscris ton équipe dès maintenant." />
@@ -64,7 +29,17 @@ export default function Tournaments() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {MOCK_TOURNAMENTS.map((t, i) => (
+        {isLoading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-[400px] bg-background-card rounded-[24px] animate-pulse border border-border-subtle" />
+          ))
+        ) : tournaments.length === 0 ? (
+          <div className="col-span-full py-20 text-center space-y-4">
+            <Trophy size={48} className="mx-auto text-text-tertiary" />
+            <h3 className="text-xl font-display font-black uppercase text-white">Aucun tournoi pour le moment</h3>
+            <p className="text-text-tertiary">Revenez bientôt pour de nouvelles compétitions.</p>
+          </div>
+        ) : tournaments.map((t, i) => (
           <motion.div
             key={t.id}
             initial={{ opacity: 0, scale: 0.95 }}
@@ -75,7 +50,11 @@ export default function Tournaments() {
               {/* Card Header Illustration (Conceptual) */}
               <div className="h-40 bg-background-secondary relative flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background-card" />
-                <Trophy size={80} className="text-accent-green/20 group-hover:scale-110 group-hover:text-accent-green/40 transition-all duration-500" />
+                {t.photoUrl ? (
+                  <img src={t.photoUrl} className="w-full h-full object-cover opacity-50 group-hover:scale-110 transition-transform duration-700" alt={t.title} />
+                ) : (
+                  <Trophy size={80} className="text-accent-green/20 group-hover:scale-110 group-hover:text-accent-green/40 transition-all duration-500" />
+                )}
                 <Badge className="absolute top-4 right-4 bg-black/50 text-white border-none font-black text-[9px] uppercase tracking-widest backdrop-blur-md">
                    {t.level}
                 </Badge>
@@ -85,7 +64,7 @@ export default function Tournaments() {
                 <div className="space-y-2">
                   <h3 className="text-2xl font-display font-black uppercase tracking-tight text-white line-clamp-1">{t.title}</h3>
                   <div className="flex items-center gap-2 text-text-tertiary text-xs font-bold uppercase tracking-widest">
-                    <MapPin size={14} className="text-accent-green" /> {t.location}
+                    <MapPin size={14} className="text-accent-green" /> {t.locationName}
                   </div>
                 </div>
 
@@ -96,7 +75,7 @@ export default function Tournaments() {
                   </div>
                   <div className="bg-background-secondary/50 p-4 rounded-xl border border-border-subtle/50">
                     <p className="text-[9px] font-black text-text-tertiary uppercase tracking-widest mb-1">Équipes</p>
-                    <p className="text-sm font-black text-white uppercase">{t.teams}/{t.maxTeams}</p>
+                    <p className="text-sm font-black text-white uppercase">{t.currentTeams}/{t.maxTeams}</p>
                   </div>
                 </div>
 
@@ -107,13 +86,13 @@ export default function Tournaments() {
                             <Medal size={20} />
                          </div>
                          <div>
-                            <p className="text-[9px] font-black text-text-tertiary uppercase tracking-widest">Prix à gagner</p>
-                            <p className="text-xs font-black text-white uppercase">{t.prize}</p>
+                            <p className="text-[9px] font-black text-text-tertiary uppercase tracking-widest">Date</p>
+                            <p className="text-xs font-black text-white uppercase">{t.startDate}</p>
                          </div>
                       </div>
                       <div className="text-right">
                          <p className="text-[9px] font-black text-text-tertiary uppercase tracking-widest">Frais</p>
-                         <p className="text-lg font-display font-black text-white">{t.price} DT</p>
+                         <p className="text-lg font-display font-black text-white">{t.pricePerTeam} DT</p>
                       </div>
                    </div>
 
@@ -126,6 +105,7 @@ export default function Tournaments() {
           </motion.div>
         ))}
       </div>
+
 
       {/* Organizer Call to action */}
       <div className="bg-accent-green p-12 rounded-[40px] flex flex-col lg:flex-row items-center justify-between gap-8 relative overflow-hidden group">

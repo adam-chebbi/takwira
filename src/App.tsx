@@ -1,11 +1,16 @@
 import * as React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { AnimatePresence, motion } from 'motion/react';
+import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
+import { ProtectedRoute, ManagerRoute, AdminRoute } from '@/src/components/auth/ProtectedRoute';
 import Navbar from '@/src/components/layout/Navbar';
 import BottomNav from '@/src/components/layout/BottomNav';
 import { Footer } from '@/src/components/layout/Footer';
 import { ToastProvider } from '@/src/components/ui/Toast';
+import { PageLoader } from '@/src/components/ui/PageLoader';
+
+// Pages
 import Home from '@/src/pages/Home';
 import Terrains from '@/src/pages/Terrains';
 import TerrainDetail from '@/src/pages/TerrainDetail';
@@ -22,6 +27,10 @@ import Terms from '@/src/pages/Terms';
 import Privacy from '@/src/pages/Privacy';
 import Contact from '@/src/pages/Contact';
 import About from '@/src/pages/About';
+import BlogList from '@/src/pages/BlogList';
+import BlogPostDetail from '@/src/pages/BlogPostDetail';
+import BlogCMSList from '@/src/pages/BlogCMSList';
+import BlogCMSEditor from '@/src/pages/BlogCMSEditor';
 import DashboardLayout from '@/src/components/DashboardLayout';
 import ManagerOnboarding from '@/src/pages/ManagerOnboarding';
 import DashboardHome from '@/src/pages/dashboard/DashboardHome';
@@ -44,9 +53,24 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, role, isLoading } = useAuth();
+  
+  if (isLoading) return <PageLoader />;
+  if (user) {
+    if (role === 'manager') return <Navigate to="/dashboard" replace />;
+    if (role === 'admin') return <Navigate to="/admin" replace />;
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
+  const { isLoading } = useAuth();
   
+  if (isLoading) return <PageLoader />;
+
   return (
     <AnimatePresence mode="wait">
       <Routes location={location}>
@@ -102,7 +126,9 @@ const AnimatedRoutes = () => {
           path="/reserver/:id"
           element={
             <PageTransition>
-              <ReservationFlow />
+              <ProtectedRoute>
+                <ReservationFlow />
+              </ProtectedRoute>
             </PageTransition>
           }
         />
@@ -118,7 +144,9 @@ const AnimatedRoutes = () => {
           path="/match/:token/manage"
           element={
             <PageTransition>
-              <MatchManage />
+              <ProtectedRoute>
+                <MatchManage />
+              </ProtectedRoute>
             </PageTransition>
           }
         />
@@ -126,7 +154,9 @@ const AnimatedRoutes = () => {
           path="/connexion"
           element={
             <PageTransition>
-              <Auth />
+              <PublicRoute>
+                <Auth />
+              </PublicRoute>
             </PageTransition>
           }
         />
@@ -134,7 +164,9 @@ const AnimatedRoutes = () => {
           path="/profil"
           element={
             <PageTransition>
-              <Profile />
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
             </PageTransition>
           }
         />
@@ -142,7 +174,9 @@ const AnimatedRoutes = () => {
           path="/inscription-gerant"
           element={
             <PageTransition>
-              <ManagerOnboarding />
+              <ProtectedRoute>
+                <ManagerOnboarding />
+              </ProtectedRoute>
             </PageTransition>
           }
         />
@@ -179,6 +213,55 @@ const AnimatedRoutes = () => {
           }
         />
         <Route
+          path="/blog"
+          element={
+            <PageTransition>
+              <BlogList />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/blog/:slug"
+          element={
+            <PageTransition>
+              <BlogPostDetail />
+            </PageTransition>
+          }
+        />
+        
+        {/* Admin Blog Routes */}
+        <Route
+          path="/admin/blog"
+          element={
+            <AdminRoute>
+              <PageTransition>
+                <BlogCMSList />
+              </PageTransition>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/blog/nouveau"
+          element={
+            <AdminRoute>
+              <PageTransition>
+                <BlogCMSEditor />
+              </PageTransition>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/blog/:id/modifier"
+          element={
+            <AdminRoute>
+              <PageTransition>
+                <BlogCMSEditor />
+              </PageTransition>
+            </AdminRoute>
+          }
+        />
+
+        <Route
           path="/a-propos"
           element={
             <PageTransition>
@@ -186,7 +269,16 @@ const AnimatedRoutes = () => {
             </PageTransition>
           }
         />
-        <Route path="/dashboard" element={<DashboardLayout />}>
+        
+        {/* Manager Dashboard */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <ManagerRoute>
+              <DashboardLayout />
+            </ManagerRoute>
+          }
+        >
           <Route index element={<DashboardHome />} />
           <Route path="terrains" element={<DashboardTerrains />} />
           <Route path="recurrences" element={<DashboardRecurrences />} />
@@ -194,13 +286,14 @@ const AnimatedRoutes = () => {
           <Route path="parametres" element={<DashboardSettings />} />
           <Route path="reservations" element={<DashboardReservations />} />
         </Route>
+
         <Route
           path="*"
           element={
             <PageTransition>
               <div className="pt-32 px-6 text-center">
-                <h1 className="text-4xl mb-4">Page non trouvée</h1>
-                <p className="text-text-secondary">Désolé, cette page est en cours de construction.</p>
+                <h1 className="text-4xl mb-4 text-white">404</h1>
+                <p className="text-text-secondary">Page non trouvée.</p>
               </div>
             </PageTransition>
           }
@@ -213,18 +306,20 @@ const AnimatedRoutes = () => {
 export default function App() {
   return (
     <HelmetProvider>
-      <ToastProvider>
-        <Router>
-          <div className="min-h-screen bg-background-primary text-text-primary selection:bg-accent-green/30 selection:text-accent-green overflow-x-hidden">
-            <Navbar />
-            <main>
-              <AnimatedRoutes />
-            </main>
-            <Footer />
-            <BottomNav />
-          </div>
-        </Router>
-      </ToastProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <Router>
+            <div className="min-h-screen bg-background-primary text-text-primary selection:bg-accent-green/30 selection:text-accent-green overflow-x-hidden">
+              <Navbar />
+              <main>
+                <AnimatedRoutes />
+              </main>
+              <Footer />
+              <BottomNav />
+            </div>
+          </Router>
+        </ToastProvider>
+      </AuthProvider>
     </HelmetProvider>
   );
 }

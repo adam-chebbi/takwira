@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // --- Users ---
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(incoming()) && (
+        isAdmin() || (
+          // Players/Managers can only update their own non-sensitive fields
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'city', 'avatarUrl'])
+        )
+      );
+    }
+
+    function isValidUser(data) {
+      return data.id is string && data.id == request.auth.uid &&
+             data.phone is string && data.phone.size() >= 8 &&
+             data.name is string && data.name.size() > 2 &&
+             data.role in ['player', 'manager', 'admin'] &&
+             data.isActive is bool &&
+             data.createdAt is timestamp;
+    }
+
+    // --- Complexes ---
+    match /complexes/{complexId} {
+      allow read: if isValidId(complexId) && (existing().isActive == true || isAdmin() || isOwner(existing().managerId));
+      allow create: if isSignedIn() && isValidComplex(incoming()) && isOwner(incoming().managerId);
+      allow update: if (isOwner(existing().managerId) || isAdmin()) && isValidComplex(incoming()) && (
+        isAdmin() || (
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'address', 'city', 'governorate', 'photos', 'description', 'openingTime', 'closingTime'])
+        )
+      );
+    }
+
+    function isValidComplex(data) {
+      return data.name is string && data.name.size() > 2 &&
+             data.managerId is string &&
+             data.city is string &&
+             data.isVerified is bool &&
+             data.isActive is bool;
+    }
+
+    // --- Terrains ---
+    match /terrains/{terrainId} {
+      allow read: if true; // Publicly viewable
+      allow create: if isSignedIn() && isValidTerrain(incoming()) && isOwner(incoming().managerId);
+      allow update: if (isOwner(existing().managerId) || isAdmin()) && isValidTerrain(incoming()) && (
+        isAdmin() || (
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'type', 'amenities', 'photos', 'pricePerHour', 'isActive'])
+        )
+      );
+    }
+
+    function isValidTerrain(data) {
+      return data.complexId is string && data.name is string &&
+             data.type in ['6v6', '7v7'] &&
+             data.pricePerHour is number &&
+             data.isActive is bool;
+    }
+
+    // --- Reservations ---
+    match /reservations/{resId} {
+      allow read: if isSignedIn() && (isOwner(existing().organizerId) || isOwner(existing().managerId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.organizerId == request.auth.uid || resource.data.managerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidReservation(incoming()) && isOwner(incoming().organizerId);
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (isOwner(existing().organizerId) && incoming().diff(existing()).affectedKeys().hasOnly(['status']) && incoming().status == 'cancelled') ||
+        (isOwner(existing().managerId) && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'internalNote']))
+      );
+    }
+
+    function isValidReservation(data) {
+      return data.terrainId is string && data.date is string &&
+             data.status in ['pending', 'confirmed', 'cancelled'] &&
+             data.organizerId == request.auth.uid;
+    }
+
+    // --- Matches ---
+    match /matches/{matchId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidMatch(incoming()) && isOwner(incoming().organizerId);
+      allow update: if (isOwner(existing().organizerId) || isAdmin()) && isValidMatch(incoming());
+    }
+
+    function isValidMatch(data) {
+      return data.title is string && data.date is string &&
+             data.status in ['upcoming', 'ongoing', 'completed', 'cancelled'] &&
+             data.organizerId == request.auth.uid;
+    }
+
+    // --- Match Players ---
+    match /matchPlayers/{playerId} {
+      allow read: if true;
+      allow create: if isSignedIn(); // Simplified: anyone can join but we should add more logic
+      allow update, delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin() || isMatchOrganizer(existing().matchId));
+    }
+
+    function isMatchOrganizer(matchId) {
+      return get(/databases/$(database)/documents/matches/$(matchId)).data.organizerId == request.auth.uid;
+    }
+
+    // --- Messages ---
+    match /matchMessages/{msgId} {
+      allow read: if true;
+      allow create: if isSignedIn() && incoming().isDeleted == false;
+      allow update: if isSignedIn() && isOwner(existing().senderId) && incoming().diff(existing()).affectedKeys().hasOnly(['isDeleted']);
+      allow delete: if isAdmin();
+    }
+  }
+}

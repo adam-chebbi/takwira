@@ -5,11 +5,15 @@ import { Bell, User, LogOut, ChevronRight, Plus, LayoutDashboard, ShieldCheck } 
 import { cn } from '@/src/lib/utils';
 import { Button } from '@/src/components/ui/Button';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { useNotifications } from '@/src/hooks/useNotifications';
+import { NotificationPanel } from './NotificationPanel';
 
 export default function Navbar() {
   const { user, userProfile, role, signOut } = useAuth();
+  const { unreadCount } = useNotifications();
   const [scrolled, setScrolled] = React.useState(false);
   const [showDropdown, setShowDropdown] = React.useState(false);
+  const [showNotifications, setShowNotifications] = React.useState(false);
   const location = useLocation();
 
   const isLoggedIn = !!user;
@@ -34,7 +38,7 @@ export default function Navbar() {
       scrolled ? "bg-background-secondary/90 backdrop-blur-xl border-b border-border-subtle h-16" : "bg-transparent"
     )}>
       {/* Logo */}
-      <Link to="/" className="flex items-center group">
+      <Link to="/" className="flex items-center group" aria-label="Takwira.com Home">
         <span className="text-2xl font-display font-black tracking-tight text-accent-green">TAKWIRA</span>
         <span className="text-2xl font-display font-black tracking-tight text-text-tertiary">.com</span>
       </Link>
@@ -76,18 +80,44 @@ export default function Navbar() {
           </div>
         ) : (
           <div className="flex items-center gap-6 relative">
-             <button className="relative text-text-tertiary hover:text-white transition-colors">
-                <Bell size={22} />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-danger text-white text-[10px] font-black rounded-full flex items-center justify-center">3</span>
+             <button 
+               onClick={() => setShowNotifications(!showNotifications)}
+               className={cn(
+                 "relative text-text-tertiary hover:text-white transition-colors",
+                 showNotifications && "text-white"
+               )}
+               aria-label="Toggle notifications"
+               aria-expanded={showNotifications}
+             >
+                <Bell size={22} className={cn(showNotifications && "fill-accent-green text-accent-green")} />
+                <AnimatePresence>
+                  {unreadCount > 0 && (
+                    <motion.span 
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="absolute -top-1 -right-1 w-4 h-4 bg-danger text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-background-secondary"
+                    >
+                      {unreadCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
              </button>
+
+             <NotificationPanel 
+               isOpen={showNotifications} 
+               onClose={() => setShowNotifications(false)} 
+             />
              
              <div className="relative">
                 <button 
                   onClick={() => setShowDropdown(!showDropdown)}
                   className="w-10 h-10 rounded-full border-2 border-accent-green/20 p-0.5 hover:border-accent-green transition-all overflow-hidden"
+                  aria-label="User profile menu"
+                  aria-expanded={showDropdown}
                 >
                    {userProfile?.avatarUrl ? (
-                     <img src={userProfile.avatarUrl} alt="" className="w-full h-full object-cover rounded-full" />
+                     <img src={userProfile.avatarUrl} alt="Your profile avatar" className="w-full h-full object-cover rounded-full" />
                    ) : (
                      <div className="w-full h-full rounded-full bg-accent-green flex items-center justify-center text-xs font-black text-black uppercase">
                        {userProfile?.name?.substring(0, 2) || user?.phoneNumber?.slice(-2)}

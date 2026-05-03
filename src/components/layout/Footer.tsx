@@ -18,6 +18,8 @@ export const Footer = () => {
           <ul className="space-y-4 text-text-secondary text-sm">
             <li><NavLink to="/terrains" className="hover:text-accent-green transition-colors">Nos Terrains</NavLink></li>
             <li><NavLink to="/matches" className="hover:text-accent-green transition-colors">Matchs Ouverts</NavLink></li>
+            <li><NavLink to="/blog" className="hover:text-accent-green transition-colors">Blog</NavLink></li>
+            <li><NavLink to="/inscription-gerant" className="hover:text-accent-green transition-colors">Enregistrer un Complexe</NavLink></li>
             <li><NavLink to="/tournaments" className="hover:text-accent-green transition-colors">Tournois</NavLink></li>
             <li><NavLink to="/academies" className="hover:text-accent-green transition-colors">Académies</NavLink></li>
             <li><NavLink to="/a-propos" className="hover:text-accent-green transition-colors">À Propos</NavLink></li>

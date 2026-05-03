@@ -1,6 +1,9 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { db, auth } from '@/src/lib/firebase';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { trackManagerSignup } from '@/src/lib/googleAds';
 import { 
   Building2, 
   MapPin, 
@@ -96,12 +99,58 @@ export default function ManagerOnboarding() {
     setFormData(prev => ({ ...prev, terrains: newTerrains }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!auth.currentUser) return;
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // 1. Create Complex
+      const complexRef = await addDoc(collection(db, 'complexes'), {
+        name: formData.complexName,
+        address: formData.address,
+        governorate: formData.governorate,
+        city: formData.city,
+        lat: parseFloat(formData.lat),
+        lng: parseFloat(formData.lng),
+        openingTime: formData.openingTime,
+        closingTime: formData.closingTime,
+        description: formData.description,
+        managerId: auth.currentUser.uid,
+        amenities: [], // Can be aggregated from terrains
+        rating: 0,
+        reviewsCount: 0,
+        photos: [], // In real app, upload files first
+        createdAt: serverTimestamp()
+      });
+
+      // 2. Create Terrains
+      for (const t of formData.terrains) {
+        await addDoc(collection(db, 'terrains'), {
+          name: t.name,
+          complexId: complexRef.id,
+          complexName: formData.complexName,
+          type: t.type,
+          amenities: t.amenities,
+          photos: [], // In real app, upload files
+          pricePerHour: 80, // Default price
+          available: true,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      // 3. Update User Role
+      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+        role: 'manager',
+        complexId: complexRef.id,
+        onboardingCompleted: true
+      });
+
+      trackManagerSignup();
       setCurrentStep('SUCCESS');
-    }, 2000);
+    } catch (err) {
+      console.error("Error submitting onboarding:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

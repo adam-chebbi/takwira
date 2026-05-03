@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useBlogPost, useRelatedPosts } from '@/src/hooks/useBlogPost';
-import { AdBanner } from '@/src/components/blog/AdBanner';
+import { AdSlot } from '@/src/components/ads/AdSlot';
 import { BlogPostCard } from '@/src/components/blog/BlogPostCard';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
@@ -38,15 +38,41 @@ export default function BlogPostDetail() {
 
   const publishedDate = post.publishedAt?.toDate() || new Date();
 
-  // Content processing: Inject ads every 3rd paragraph
-  const processContent = (html: string) => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    const paragraphs = tempDiv.querySelectorAll('p');
+  // Content processing: Inject ads at safe points
+  const renderContentWithAds = (html: string) => {
+    const sanitized = DOMPurify.sanitize(html);
+    // Split by paragraph but filter empty ones
+    const paragraphs = sanitized.split('</p>')
+      .map(p => p.trim())
+      .filter(p => p.length > 0)
+      .map(p => p + '</p>');
     
-    // Simple injection logic for demo - in a real app you'd use a server-side parser or a more robust React component
-    // Here we'll just return the sanitized HTML and maybe handle injection differently if needed
-    return DOMPurify.sanitize(html);
+    let adInjected = false;
+
+    return paragraphs.map((p, index) => {
+      const key = `p-${index}`;
+      
+      // Validation: Is this a safe point to inject an ad AFTER this block?
+      // 1. Not the first paragraph
+      // 2. Not already injected
+      // 3. Current block doesn't contain restricted elements (h1-h6, blockquote, pre, etc.)
+      const isFirst = index === 0;
+      const hasRestricted = /<(h[1-6]|blockquote|pre|code|img|figure)/i.test(p);
+      
+      const shouldInjectAfter = !adInjected && index >= 2 && !hasRestricted && !isFirst;
+      if (shouldInjectAfter) adInjected = true;
+
+      return (
+        <React.Fragment key={key}>
+          <div dangerouslySetInnerHTML={{ __html: p }} />
+          {shouldInjectAfter && (
+            <div className="my-12">
+              <AdSlot position="blog_post_inline" />
+            </div>
+          )}
+        </React.Fragment>
+      );
+    });
   };
 
   const handleShareWhatsApp = () => {
@@ -128,8 +154,9 @@ export default function BlogPostDetail() {
             {/* Content Area */}
             <div 
               className="blog-content prose prose-invert prose-p:text-text-primary prose-p:text-lg prose-p:leading-relaxed prose-headings:font-display prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-blockquote:border-accent-green prose-blockquote:bg-background-card prose-blockquote:rounded-r-2xl prose-blockquote:py-1 prose-a:text-accent-green max-w-none mb-20"
-              dangerouslySetInnerHTML={{ __html: processContent(post.content) }}
-            />
+            >
+              {renderContentWithAds(post.content)}
+            </div>
 
             {/* Bottom Actions */}
             <div className="pt-12 border-t border-border-subtle flex flex-col items-center space-y-6">
@@ -148,7 +175,7 @@ export default function BlogPostDetail() {
           {/* Sidebar */}
           <aside className="hidden lg:block w-[350px] shrink-0">
             <div className="sticky top-24 space-y-12">
-              <AdBanner position="blog_sidebar_top" className="h-[250px]" />
+              <AdSlot position="blog_sidebar_top" className="h-[250px]" />
               
               <div className="space-y-6">
                 <h3 className="text-xl font-display font-black uppercase tracking-tight text-white border-l-4 border-accent-green pl-4">
@@ -173,7 +200,7 @@ export default function BlogPostDetail() {
                 </div>
               </div>
 
-              <AdBanner position="blog_sidebar_bottom" className="h-[250px]" />
+              <AdSlot position="blog_sidebar_bottom" className="h-[250px]" />
             </div>
           </aside>
         </div>

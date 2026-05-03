@@ -16,7 +16,8 @@ import {
   X,
   AlertCircle,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Euro
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/src/components/ui/Button';
@@ -124,38 +125,45 @@ const CountdownTimer = ({ targetDate }: { targetDate: string }) => {
 
 import { useMatch } from '@/src/hooks/useMatch';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { trackCheckin } from '@/src/lib/googleAds';
 import MatchChat from '@/src/components/match/MatchChat';
 
 export default function MatchPublic() {
   const { token } = useParams();
   const { user, userProfile } = useAuth();
-  const { match, isLoading: matchLoading } = useMatch(token);
-  const [players, setPlayers] = React.useState<Player[]>(INITIAL_PLAYERS);
+  const { match, players: dbPlayers, isLoading: matchLoading, joinMatch } = useMatch(token);
   const [isCheckInOpen, setIsCheckInOpen] = React.useState(false);
   const [hasJoined, setHasJoined] = React.useState(false);
-  const [userName, setUserName] = React.useState('');
+  const [userName, setUserName] = React.useState(userProfile?.name || '');
+  const [userPhone, setUserPhone] = React.useState(userProfile?.phone || '');
   const [isJoining, setIsJoining] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
 
   const matchUrl = typeof window !== 'undefined' ? window.location.href : `takwira.com/match/${token}`;
 
-  const handleJoin = (e: React.FormEvent) => {
+  // Use DB players if available, fallback to mock for demo if match not in DB
+  const displayPlayers = dbPlayers.length > 0 ? dbPlayers : INITIAL_PLAYERS;
+
+  const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userName.trim()) return;
 
     setIsJoining(true);
-    setTimeout(() => {
-      const newPlayer = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: userName,
-        joinedAt: new Date().toISOString()
-      };
-      setPlayers(prev => [...prev, newPlayer]);
+    try {
+      if (match) {
+        await joinMatch(user?.uid, userName, userPhone);
+      } else {
+        // Fallback for demo/mock
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      trackCheckin();
       setHasJoined(true);
-      setIsJoining(false);
       setIsCheckInOpen(false);
-      // In a real app, toast would be shown here
-    }, 1000);
+    } catch (err) {
+      console.error("Join error:", err);
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   const copyToClipboard = () => {
@@ -265,7 +273,7 @@ export default function MatchPublic() {
                 <p className="text-xs text-text-secondary font-medium uppercase tracking-widest">Ils ont déjà pris leur place</p>
               </div>
               <div className="text-right">
-                <span className="text-4xl font-display font-black text-accent-green">{players.length}</span>
+                <span className="text-4xl font-display font-black text-accent-green">{displayPlayers.length}</span>
                 <span className="text-xl font-display font-bold text-text-secondary"> / {MOCK_MATCH.maxPlayers}</span>
               </div>
             </div>
@@ -274,7 +282,7 @@ export default function MatchPublic() {
             <div className="w-full h-3 bg-background-secondary rounded-full overflow-hidden border border-border-subtle">
               <motion.div 
                 initial={{ width: 0 }}
-                animate={{ width: `${(players.length / MOCK_MATCH.maxPlayers) * 100}%` }}
+                animate={{ width: `${(displayPlayers.length / MOCK_MATCH.maxPlayers) * 100}%` }}
                 transition={{ duration: 0.8, ease: "circOut" }}
                 className="h-full bg-accent-green shadow-[0_0_15px_rgba(0,255,135,0.4)]"
               />
@@ -282,7 +290,7 @@ export default function MatchPublic() {
 
             {/* Player Grid */}
             <div className="grid grid-cols-4 md:grid-cols-6 gap-y-10 gap-x-6">
-              {players.map((player) => (
+              {displayPlayers.map((player) => (
                 <motion.div 
                   key={player.id}
                   initial={{ scale: 0, opacity: 0 }}
@@ -301,7 +309,7 @@ export default function MatchPublic() {
               ))}
               
               {/* Empty Spots */}
-              {Array.from({ length: MOCK_MATCH.maxPlayers - players.length }).map((_, i) => (
+              {Array.from({ length: MOCK_MATCH.maxPlayers - displayPlayers.length }).map((_, i) => (
                 <div key={`empty-${i}`} className="flex flex-col items-center gap-3 animate-pulse">
                   <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-dashed border-border-subtle flex items-center justify-center text-text-tertiary">
                     <span className="font-display font-bold text-xl">?</span>
@@ -581,6 +589,8 @@ export default function MatchPublic() {
                           </div>
                           <input 
                             type="tel"
+                            value={userPhone}
+                            onChange={(e) => setUserPhone(e.target.value)}
                             className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl pl-12 pr-4 h-14 font-sans text-sm transition-all"
                             placeholder="+216 00 000 000"
                           />
@@ -621,24 +631,4 @@ export default function MatchPublic() {
   );
 }
 
-// Re-using these from standard icons
-function Euro(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M4 10h12" />
-      <path d="M4 14h9" />
-      <path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12a7.9 7.9 0 0 0 7.8 8 7.7 7.7 0 0 0 5.2-2" />
-    </svg>
-  );
-}
+// Re-using these from standard icons (None needed now as Euro is imported)

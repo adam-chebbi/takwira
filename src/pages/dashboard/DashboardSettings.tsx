@@ -30,36 +30,52 @@ import { doc, updateDoc } from 'firebase/firestore';
 export default function DashboardSettings() {
   const { user } = useAuth();
   const { complex, isLoading } = useManagerComplex(user?.uid);
-  const [activeTab, setActiveTab] = React.useState<'complex' | 'billing' | 'notifications' | 'appearance'>('complex');
+  const [activeTab, setActiveTab] = React.useState<'complex' | 'profile' | 'billing' | 'notifications'>('complex');
   const [formData, setFormData] = React.useState({
     name: '',
     phone: '',
     address: '',
-    description: ''
+    description: '',
+    cityName: '', // Added for profile
+    fullName: ''   // Added for profile
   });
 
   React.useEffect(() => {
     if (complex) {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         name: complex.name,
-        phone: 'Non renseigné', // Complex model doesn't have phone yet, maybe use manager phone
         address: complex.address,
         description: complex.description || ''
-      });
+      }));
     }
-  }, [complex]);
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        fullName: user.displayName || '',
+        cityName: '', // Would need to fetch from users collection if not in auth
+      }));
+    }
+  }, [complex, user]);
 
   const handleSave = async () => {
-    if (!complex) return;
+    if (!user) return;
     try {
-      await updateDoc(doc(db, 'complexes', complex.id), {
-        name: formData.name,
-        address: formData.address,
-        description: formData.description
-      });
+      if (activeTab === 'complex' && complex) {
+        await updateDoc(doc(db, 'complexes', complex.id), {
+          name: formData.name,
+          address: formData.address,
+          description: formData.description
+        });
+      } else if (activeTab === 'profile') {
+        await updateDoc(doc(db, 'users', user.uid), {
+          name: formData.fullName,
+          city: formData.cityName
+        });
+      }
       alert("Paramètres enregistrés !");
     } catch (error) {
-      console.error("Error saving complex settings:", error);
+      console.error("Error saving settings:", error);
     }
   };
 
@@ -84,10 +100,10 @@ export default function DashboardSettings() {
         {/* Left Nav */}
         <aside className="w-full lg:w-64 shrink-0 space-y-2">
           {[
+            { id: 'profile', label: 'Mon Profil', icon: ShieldCheck },
             { id: 'complex', label: 'Mon Complexe', icon: Building2 },
             { id: 'billing', label: 'Facturation', icon: CreditCard },
             { id: 'notifications', label: 'Notifications', icon: Bell },
-            { id: 'appearance', label: 'Apparence', icon: Palette },
           ].map(tab => (
             <button
               key={tab.id}
@@ -107,6 +123,37 @@ export default function DashboardSettings() {
 
         {/* Right Content */}
         <div className="flex-1 space-y-8">
+          {activeTab === 'profile' && (
+            <div className="space-y-8 max-w-3xl">
+              <Card className="p-8 space-y-8 bg-background-card border-border-subtle">
+                <div className="flex items-center gap-3">
+                   <div className="w-1.5 h-6 bg-accent-green rounded-full" />
+                   <h2 className="text-xl font-display font-black uppercase tracking-tight">Mon Profil</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Nom Complet</label>
+                      <input 
+                        type="text" 
+                        value={formData.fullName}
+                        onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                        className="w-full h-14 bg-background-secondary border border-border-subtle rounded-xl px-4 text-sm focus:border-accent-green outline-none text-white transition-all"
+                      />
+                   </div>
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Ville</label>
+                      <input 
+                        type="text" 
+                        value={formData.cityName}
+                        onChange={(e) => setFormData({...formData, cityName: e.target.value})}
+                        className="w-full h-14 bg-background-secondary border border-border-subtle rounded-xl px-4 text-sm focus:border-accent-green outline-none text-white transition-all"
+                      />
+                   </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
           {activeTab === 'complex' && (
             <div className="space-y-8 max-w-3xl">
               {/* Complex Info */}

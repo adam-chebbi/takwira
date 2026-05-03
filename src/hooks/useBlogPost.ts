@@ -12,8 +12,10 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/src/lib/firebase';
 import { BlogPost } from '@/src/lib/schema';
+import { useCookie } from '@/src/contexts/CookieContext';
 
 export function useBlogPost(slugOrId: string, isSlug = true) {
+  const { canTrackAnalytics } = useCookie();
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,10 +38,12 @@ export function useBlogPost(slugOrId: string, isSlug = true) {
           } else {
             const postData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as BlogPost;
             setPost(postData);
-            // Increment views
-            updateDoc(doc(db, 'blogPosts', postData.id), {
-              viewCount: increment(1)
-            });
+            // Increment views if analytics allowed
+            if (canTrackAnalytics) {
+              updateDoc(doc(db, 'blogPosts', postData.id), {
+                viewCount: increment(1)
+              });
+            }
           }
         } else {
           const docRef = doc(db, 'blogPosts', slugOrId);

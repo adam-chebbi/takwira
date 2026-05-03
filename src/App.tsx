@@ -9,6 +9,11 @@ import BottomNav from '@/src/components/layout/BottomNav';
 import { Footer } from '@/src/components/layout/Footer';
 import { ToastProvider } from '@/src/components/ui/Toast';
 import { PageLoader } from '@/src/components/ui/PageLoader';
+import { CookieBanner } from '@/src/components/ui/CookieBanner';
+
+import { ErrorBoundary } from '@/src/components/ErrorBoundary';
+import NotFound from '@/src/pages/NotFound';
+import MaintenancePage from '@/src/pages/MaintenancePage';
 
 // Pages
 import Home from '@/src/pages/Home';
@@ -20,6 +25,8 @@ import Tournaments from '@/src/pages/Tournaments';
 import Academies from '@/src/pages/Academies';
 import MatchPublic from '@/src/pages/MatchPublic';
 import MatchManage from '@/src/pages/MatchManage';
+import CreateMatch from '@/src/pages/CreateMatch';
+import MyMatches from '@/src/pages/MyMatches';
 import Auth from '@/src/pages/Auth';
 import Profile from '@/src/pages/Profile';
 import HelpCenter from '@/src/pages/HelpCenter';
@@ -31,6 +38,8 @@ import BlogList from '@/src/pages/BlogList';
 import BlogPostDetail from '@/src/pages/BlogPostDetail';
 import BlogCMSList from '@/src/pages/BlogCMSList';
 import BlogCMSEditor from '@/src/pages/BlogCMSEditor';
+import AdminAds from '@/src/pages/AdminAds';
+import CookiePolicy from '@/src/pages/CookiePolicy';
 import DashboardLayout from '@/src/components/DashboardLayout';
 import ManagerOnboarding from '@/src/pages/ManagerOnboarding';
 import DashboardHome from '@/src/pages/dashboard/DashboardHome';
@@ -39,6 +48,12 @@ import DashboardRecurrences from '@/src/pages/dashboard/DashboardRecurrences';
 import DashboardAcademies from '@/src/pages/dashboard/DashboardAcademies';
 import DashboardReservations from '@/src/pages/dashboard/DashboardReservations';
 import DashboardSettings from '@/src/pages/dashboard/DashboardSettings';
+import AdminLayout from '@/src/components/AdminLayout';
+import AdminDashboard from '@/src/pages/admin/AdminDashboard';
+import AdminComplexes from '@/src/pages/admin/AdminComplexes';
+import AdminUsers from '@/src/pages/admin/AdminUsers';
+import AdminReservations from '@/src/pages/admin/AdminReservations';
+import AdminSettings from '@/src/pages/admin/AdminSettings';
 
 const PageTransition = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -67,9 +82,13 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
 const AnimatedRoutes = () => {
   const location = useLocation();
-  const { isLoading } = useAuth();
+  const { isLoading, isMaintenanceMode, maintenanceReturnTime, role } = useAuth();
   
   if (isLoading) return <PageLoader />;
+
+  if (isMaintenanceMode && role !== 'admin') {
+    return <MaintenancePage estimatedReturn={maintenanceReturnTime || undefined} />;
+  }
 
   return (
     <AnimatePresence mode="wait">
@@ -146,6 +165,26 @@ const AnimatedRoutes = () => {
             <PageTransition>
               <ProtectedRoute>
                 <MatchManage />
+              </ProtectedRoute>
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/creer-match"
+          element={
+            <PageTransition>
+              <ProtectedRoute>
+                <CreateMatch />
+              </ProtectedRoute>
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/mes-matchs"
+          element={
+            <PageTransition>
+              <ProtectedRoute>
+                <MyMatches />
               </ProtectedRoute>
             </PageTransition>
           }
@@ -229,38 +268,34 @@ const AnimatedRoutes = () => {
           }
         />
         
-        {/* Admin Blog Routes */}
-        <Route
-          path="/admin/blog"
+        {/* Admin Dashboard */}
+        <Route 
+          path="/admin" 
           element={
             <AdminRoute>
-              <PageTransition>
-                <BlogCMSList />
-              </PageTransition>
+              <AdminLayout />
             </AdminRoute>
           }
-        />
-        <Route
-          path="/admin/blog/nouveau"
-          element={
-            <AdminRoute>
-              <PageTransition>
-                <BlogCMSEditor />
-              </PageTransition>
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/blog/:id/modifier"
-          element={
-            <AdminRoute>
-              <PageTransition>
-                <BlogCMSEditor />
-              </PageTransition>
-            </AdminRoute>
-          }
-        />
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="complexes" element={<AdminComplexes />} />
+          <Route path="utilisateurs" element={<AdminUsers />} />
+          <Route path="reservations" element={<AdminReservations />} />
+          <Route path="blog" element={<BlogCMSList />} />
+          <Route path="blog/nouveau" element={<BlogCMSEditor />} />
+          <Route path="blog/:id/modifier" element={<BlogCMSEditor />} />
+          <Route path="publicites" element={<AdminAds />} />
+          <Route path="parametres" element={<AdminSettings />} />
+        </Route>
 
+        <Route
+          path="/cookies"
+          element={
+            <PageTransition>
+              <CookiePolicy />
+            </PageTransition>
+          }
+        />
         <Route
           path="/a-propos"
           element={
@@ -291,10 +326,7 @@ const AnimatedRoutes = () => {
           path="*"
           element={
             <PageTransition>
-              <div className="pt-32 px-6 text-center">
-                <h1 className="text-4xl mb-4 text-white">404</h1>
-                <p className="text-text-secondary">Page non trouvée.</p>
-              </div>
+              <NotFound />
             </PageTransition>
           }
         />
@@ -312,10 +344,13 @@ export default function App() {
             <div className="min-h-screen bg-background-primary text-text-primary selection:bg-accent-green/30 selection:text-accent-green overflow-x-hidden">
               <Navbar />
               <main>
-                <AnimatedRoutes />
+                <ErrorBoundary>
+                  <AnimatedRoutes />
+                </ErrorBoundary>
               </main>
               <Footer />
               <BottomNav />
+              <CookieBanner />
             </div>
           </Router>
         </ToastProvider>

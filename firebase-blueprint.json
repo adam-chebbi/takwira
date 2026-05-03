@@ -80,6 +80,49 @@
         "internalNote": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "Match": {
+      "title": "Match",
+      "description": "Public match details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "organizerId": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "startTime": { "type": "string" },
+        "status": { "type": "string", "enum": ["upcoming", "ongoing", "completed", "cancelled"] },
+        "linkToken": { "type": "string" },
+        "teamsPublished": { "type": "boolean" }
+      }
+    },
+    "MatchPlayer": {
+      "title": "MatchPlayer",
+      "description": "Player in a match",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "matchId": { "type": "string" },
+        "playerName": { "type": "string" },
+        "userId": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "In-app notifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "relatedId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "type", "title", "body", "isRead", "createdAt"]
     }
   },
   "firestore": {
@@ -134,6 +177,14 @@
     "notifications/{notificationId}": {
       "schema": "AppNotification",
       "description": "User specific notifications"
+    },
+    "settings/{settingId}": {
+      "schema": "object",
+      "description": "Platform settings and configuration"
+    },
+    "test/{id}": {
+      "schema": "object",
+      "description": "Connection test collection"
     }
   }
 }

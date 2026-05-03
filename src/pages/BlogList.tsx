@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useBlog } from '@/src/hooks/useBlog';
 import { BlogPostCard } from '@/src/components/blog/BlogPostCard';
-import { AdBanner } from '@/src/components/blog/AdBanner';
+import { AdSlot } from '@/src/components/ads/AdSlot';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from '@/src/components/ui/Button';
 import { Loader2, Search } from 'lucide-react';
@@ -65,7 +65,7 @@ export default function BlogList() {
                 <BlogPostCard post={post} />
                 {index === 5 && (
                   <div className="col-span-full py-8">
-                    <AdBanner position="blog_list_between" className="h-[200px] md:h-[300px]" />
+                    <AdSlot position="blog_list_between" className="h-[200px] md:h-[300px]" />
                   </div>
                 )}
               </React.Fragment>

@@ -15,6 +15,14 @@ export default function BottomNav() {
     { label: 'Profil', icon: User, path: '/profil' },
   ];
 
+  // Hidden on specific flows
+  const shouldHide = location.pathname.startsWith('/reserver/') || 
+                     location.pathname.startsWith('/match/') ||
+                     location.pathname === '/inscription-gerant' ||
+                     location.pathname === '/creer-match';
+
+  if (shouldHide) return null;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-[100] md:hidden bg-background-secondary border-t border-border-subtle h-16 pt-2 pb-[env(safe-area-inset-bottom)] px-4 shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
       <div className="flex items-center justify-between relative h-full max-w-sm mx-auto">

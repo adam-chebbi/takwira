@@ -142,5 +142,28 @@ service cloud.firestore {
       allow update: if isSignedIn() && isOwner(existing().senderId) && incoming().diff(existing()).affectedKeys().hasOnly(['isDeleted']);
       allow delete: if isAdmin();
     }
+
+    // --- Academies ---
+    match /academies/{academyId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isOwner(incoming().managerId);
+      allow update: if (isOwner(existing().managerId) || isAdmin());
+    }
+
+    // --- Academy Members ---
+    match /academyMembers/{memberId} {
+      allow read: if isSignedIn() && (isOwner(existing().userId) || isOwner(existing().managerId) || isAdmin());
+      allow create: if isSignedIn() && isOwner(incoming().managerId);
+      allow update: if (isOwner(existing().managerId) || isAdmin());
+    }
+
+    // --- Notifications ---
+    match /notifications/{notifId} {
+      allow read: if isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn(); // Allow creation by other users (e.g. when joining match)
+      allow update: if isOwner(existing().userId) && incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isOwner(existing().userId);
+    }
   }
 }

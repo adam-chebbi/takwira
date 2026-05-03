@@ -23,6 +23,12 @@ import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { Badge } from '@/src/components/ui/Badge';
 import { cn } from '@/src/lib/utils';
+import { getDocs, query, collection, where, Timestamp } from 'firebase/firestore';
+import { db } from '@/src/lib/firebase';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { createNotification } from '@/src/lib/notifications';
+import { AcademyMember } from '@/src/lib/schema';
+import { addDays, isBefore, parseISO, startOfDay } from 'date-fns';
 
 // --- Types & Data ---
 const CHART_DATA = [
@@ -89,7 +95,45 @@ function KPICard({ label, value, color, children }: { label: string, value: stri
 }
 
 export default function DashboardHome() {
+  const { user } = useAuth();
   const [currentTimeX, setCurrentTimeX] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!user) return;
+
+    const checkAcademyExpirations = async () => {
+      try {
+        const q = query(collection(db, 'academyMembers'), where('managerId', '==', user.uid));
+        const snapshot = await getDocs(q);
+        const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AcademyMember));
+        
+        const now = startOfDay(new Date());
+        const notificationThreshold = addDays(now, 7);
+
+        for (const member of members) {
+          if (!member.userId) continue;
+          
+          const endDate = parseISO(member.subscriptionEnd);
+          
+          // Check if it's exactly 7 days away or within 7 days and not already notified
+          // For simplicity in this demo, we'll just check if it's before threshold
+          if (isBefore(endDate, notificationThreshold) && !isBefore(endDate, now)) {
+            await createNotification(
+              member.userId,
+              'academy_expiring',
+              'Abonnement bientôt expiré',
+              `Ton abonnement à l'académie "${member.fullName}" expire le ${member.subscriptionEnd}. Pense à le renouveler !`,
+              member.id
+            );
+          }
+        }
+      } catch (err) {
+        console.error("Error checking academy expirations:", err);
+      }
+    };
+
+    checkAcademyExpirations();
+  }, [user]);
 
   React.useEffect(() => {
     const updateProgress = () => {

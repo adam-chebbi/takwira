@@ -37,7 +37,7 @@ export interface Terrain {
   complexName: string;
   managerId: string;
   name: string;
-  type: '6v6' | '7v7';
+  type: '6vs6' | '7vs7';
   maxPlayers: number;
   amenities: ('vestiaires' | 'eclairage' | 'parking' | 'buvette' | 'tribune')[];
   photos: string[];
@@ -85,13 +85,15 @@ export interface Match {
   id: string;
   reservationId?: string;
   terrainId?: string;
-  complexId?: string;
+  terrainName?: string;
+  complexName?: string;
   organizerId: string;
   organizerName: string;
   title: string;
   date: string;
   startTime: string;
-  format: '6v6' | '7v7';
+  endTime?: string;
+  format: '6vs6' | '7vs7';
   maxPlayers: number;
   linkToken: string;
   teamA: string[];
@@ -168,6 +170,7 @@ export interface Academy {
 
 export interface AcademyMember {
   id: string;
+  userId?: string;
   academyId: string;
   complexId: string;
   managerId: string;
@@ -205,11 +208,15 @@ export interface BlogPost {
 
 export interface AdSlot {
   id: string;
-  title: string;
+  name: string;
+  title: string; // for internal use or display
   imageUrl: string;
   linkUrl: string;
+  altText: string;
   position: 'blog_list_between' | 'blog_post_inline' | 'blog_sidebar_top' | 'blog_sidebar_bottom';
   isActive: boolean;
+  startDate: Timestamp;
+  endDate: Timestamp | null;
   impressionCount: number;
   clickCount: number;
   createdAt: Timestamp;

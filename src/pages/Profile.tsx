@@ -100,13 +100,16 @@ const MatchTicket: React.FC<{ match: any, type: 'upcoming' | 'history' }> = ({ m
 
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useReservations } from '@/src/hooks/useReservations';
+import { useCookie } from '@/src/contexts/CookieContext';
 import { db, auth as firebaseAuth } from '@/src/lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 
 export default function Profile() {
   const { user, userProfile, signOut } = useAuth();
+  const { consent, resetConsent, canTrackAnalytics, canTrackAdvertising } = useCookie();
   const [activeTab, setActiveTab] = React.useState<'matchs' | 'favoris' | 'config'>('matchs');
   const [matchTab, setMatchTab] = React.useState<'avenir' | 'histo'>('avenir');
+  const [showCookieModal, setShowCookieModal] = React.useState(false);
   
   const { reservations, isLoading: reservationsLoading } = useReservations({ 
     organizerId: user?.uid 
@@ -297,6 +300,69 @@ export default function Profile() {
                         }} 
                       />
                    </Card>
+
+                   <div className="pt-12 space-y-6">
+                      <h3 className="text-xl font-display font-black uppercase tracking-tight text-white flex items-center gap-3">
+                         <Globe size={20} className="text-accent-green" /> Gestion des Cookies
+                      </h3>
+                      
+                      <Card className="divide-y divide-border-subtle bg-background-card overflow-hidden">
+                         <div className="px-6 py-4 flex items-center justify-between">
+                            <div className="space-y-0.5">
+                               <p className="text-xs font-bold text-white">Cookies Essentiels</p>
+                               <p className="text-[10px] text-text-tertiary">Session, Sécurité, Authentification</p>
+                            </div>
+                            <Badge className="bg-background-secondary text-text-tertiary border-none uppercase font-black text-[8px] tracking-widest h-5">Toujours actif</Badge>
+                         </div>
+                         <div className="px-6 py-4 flex items-center justify-between">
+                            <div className="space-y-0.5">
+                               <p className="text-xs font-bold text-white">Cookies Analytiques</p>
+                               <p className="text-[10px] text-text-tertiary">Fréquentation, vues d'articles</p>
+                            </div>
+                            <Badge className={cn(
+                               "border-none uppercase font-black text-[8px] tracking-widest h-5",
+                               canTrackAnalytics ? "bg-accent-green/10 text-accent-green" : "bg-danger/10 text-danger"
+                            )}>
+                               {canTrackAnalytics ? 'Activé' : 'Désactivé'}
+                            </Badge>
+                         </div>
+                         <div className="px-6 py-4 flex items-center justify-between">
+                            <div className="space-y-0.5">
+                               <p className="text-xs font-bold text-white">Cookies Publicitaires</p>
+                               <p className="text-[10px] text-text-tertiary">Performance des annonces, clics</p>
+                            </div>
+                            <Badge className={cn(
+                               "border-none uppercase font-black text-[8px] tracking-widest h-5",
+                               canTrackAdvertising ? "bg-accent-green/10 text-accent-green" : "bg-danger/10 text-danger"
+                            )}>
+                               {canTrackAdvertising ? 'Activé' : 'Désactivé'}
+                            </Badge>
+                         </div>
+                      </Card>
+
+                      <div className="flex flex-col sm:flex-row gap-4">
+                         <Button 
+                           variant="outline" 
+                           fullWidth
+                           onClick={() => resetConsent()}
+                           className="h-14 border-border-subtle text-text-primary gap-3 font-black uppercase tracking-widest text-xs"
+                         >
+                            Modifier mes préférences
+                         </Button>
+                         <Button 
+                           variant="outline" 
+                           fullWidth
+                           onClick={() => {
+                             if (window.confirm("Êtes-vous sûr de vouloir retirer votre consentement ? La bannière de cookies réapparaîtra au prochain chargement.")) {
+                               resetConsent();
+                             }
+                           }}
+                           className="h-14 border-danger/30 text-danger hover:bg-danger hover:text-white gap-3 font-black uppercase tracking-widest text-xs"
+                         >
+                            Retirer mon consentement
+                         </Button>
+                      </div>
+                   </div>
 
                    <div className="pt-8 space-y-4">
                       <Button 

@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { collection, query, where, orderBy, onSnapshot, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, getDocs, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/src/lib/firebase';
 import { Match, MatchPlayer, MatchMessage } from '@/src/lib/schema';
+import { createNotification } from '@/src/lib/notifications';
 
 export const useMatch = (linkToken: string | undefined) => {
   const [match, setMatch] = React.useState<Match | null>(null);
@@ -61,5 +62,34 @@ export const useMatch = (linkToken: string | undefined) => {
     fetchMatch();
   }, [linkToken]);
 
-  return { match, players, messages, isLoading, error };
+  const joinMatch = async (userId: string | undefined, name: string, phone: string) => {
+    if (!match) return;
+
+    try {
+      await addDoc(collection(db, 'matchPlayers'), {
+        matchId: match.id,
+        userId: userId || null,
+        playerName: name,
+        playerPhone: phone,
+        status: 'confirmed',
+        joinedAt: serverTimestamp()
+      });
+
+      // Notify the organizer
+      if (match.organizerId) {
+        await createNotification(
+          match.organizerId,
+          'new_player_joined',
+          'Nouveau joueur !',
+          `${name} a rejoint ton match "${match.title}"`,
+          match.id
+        );
+      }
+    } catch (err) {
+      console.error("Error joining match:", err);
+      throw err;
+    }
+  };
+
+  return { match, players, messages, isLoading, error, joinMatch };
 };

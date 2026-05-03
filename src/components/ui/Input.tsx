@@ -9,14 +9,15 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   rightIcon?: LucideIcon;
   error?: string;
   helpText?: string;
+  fullWidth?: boolean;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, type, leftIcon: LeftIcon, rightIcon: RightIcon, error, helpText, ...props }, ref) => {
+  ({ className, label, type, leftIcon: LeftIcon, rightIcon: RightIcon, error, helpText, fullWidth = true, ...props }, ref) => {
     const [isFocused, setIsFocused] = React.useState(false);
 
     return (
-      <div className="space-y-2 w-full">
+      <div className={cn("space-y-2", fullWidth ? "w-full" : "w-auto")}>
         {label && (
           <label className="text-sm font-semibold text-text-secondary ml-1">
             {label}

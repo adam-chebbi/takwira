@@ -12,7 +12,12 @@ interface Toast {
 }
 
 interface ToastContextType {
+  (message: string, type?: ToastType): void;
   toast: (message: string, type?: ToastType) => void;
+  success: (message: string) => void;
+  error: (message: string) => void;
+  warning: (message: string) => void;
+  info: (message: string) => void;
 }
 
 const ToastContext = React.createContext<ToastContextType | undefined>(undefined);
@@ -28,8 +33,23 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     }, 4000);
   }, []);
 
+  const success = React.useCallback((message: string) => toast(message, 'success'), [toast]);
+  const error = React.useCallback((message: string) => toast(message, 'error'), [toast]);
+  const warning = React.useCallback((message: string) => toast(message, 'warning'), [toast]);
+  const info = React.useCallback((message: string) => toast(message, 'info'), [toast]);
+
+  const contextValue = React.useMemo(() => {
+    const fn = toast as any;
+    fn.toast = toast;
+    fn.success = success;
+    fn.error = error;
+    fn.warning = warning;
+    fn.info = info;
+    return fn as ToastContextType;
+  }, [toast, success, error, warning, info]);
+
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <div className="fixed z-[100] flex flex-col gap-3 pointer-events-none 
         bottom-20 left-1/2 -translate-x-1/2 w-full max-w-[90vw] md:max-w-none

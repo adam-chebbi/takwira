@@ -21,12 +21,13 @@ import { Button } from '@/src/components/ui/Button';
 import { Badge } from '@/src/components/ui/Badge';
 import { cn } from '@/src/lib/utils';
 
-// --- Mock Data ---
+// --- Mock Data --- 
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useManagerComplex } from '@/src/hooks/useManagerComplex';
 import { useReservations } from '@/src/hooks/useReservations';
 import { db } from '@/src/lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { createNotification } from '@/src/lib/notifications';
 
 export default function DashboardReservations() {
   const { user } = useAuth();
@@ -48,6 +49,30 @@ export default function DashboardReservations() {
   const handleUpdateStatus = async (id: string, newStatus: 'confirmed' | 'cancelled') => {
     try {
       await updateDoc(doc(db, 'reservations', id), { status: newStatus });
+      
+      // Notify the organizer
+      const resDoc = await getDoc(doc(db, 'reservations', id));
+      const resData = resDoc.data();
+      
+      if (resData?.organizerId) {
+        if (newStatus === 'confirmed') {
+          await createNotification(
+            resData.organizerId,
+            'reservation_confirmed',
+            'Réservation confirmée !',
+            `Ta session sur ${resData.terrainName || 'terrain'} le ${resData.date} à ${resData.startTime} est confirmée.`,
+            id
+          );
+        } else if (newStatus === 'cancelled') {
+          await createNotification(
+            resData.organizerId,
+            'reservation_cancelled',
+            'Réservation annulée',
+            `Désolé, ta session du ${resData.date} à ${resData.startTime} a été annulée par le complexe.`,
+            id
+          );
+        }
+      }
     } catch (error) {
       console.error("Error updating reservation status:", error);
     }

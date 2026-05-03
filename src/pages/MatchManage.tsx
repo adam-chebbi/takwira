@@ -47,12 +47,16 @@ import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { Badge } from '@/src/components/ui/Badge';
 import { cn } from '@/src/lib/utils';
+import { updateDoc, doc } from 'firebase/firestore';
+import { db } from '@/src/lib/firebase';
+import { createNotification } from '@/src/lib/notifications';
 
 // --- Types ---
 interface Player {
   id: string;
   name: string;
   phone?: string;
+  userId?: string;
   status: 'confirmed' | 'absent' | 'pending';
   team?: 'A' | 'B';
 }
@@ -283,6 +287,40 @@ export default function MatchManage() {
       </div>
     );
   }
+
+  const handlePublishTeams = async () => {
+    if (!match) return;
+    
+    try {
+      const teamA = players.filter(p => p.team === 'A').map(p => p.name);
+      const teamB = players.filter(p => p.team === 'B').map(p => p.name);
+      
+      await updateDoc(doc(db, 'matches', match.id), {
+        teamA,
+        teamB,
+        teamsPublished: true
+      });
+
+      // Notify all players who have a userId
+      const playersToNotify = players.filter(p => p.userId);
+      for (const p of playersToNotify) {
+        if (p.userId) {
+          await createNotification(
+            p.userId,
+            'team_published',
+            'Équipes publiées !',
+            `Les équipes pour le match "${match.title}" sont prêtes. Découvre la tienne !`,
+            match.id
+          );
+        }
+      }
+      
+      // Navigate to public page to see result
+      navigate(`/match/${token}`);
+    } catch (err) {
+      console.error("Error publishing teams:", err);
+    }
+  };
 
   const effectiveMatchId = match?.id || token || 'demo';
 
@@ -676,7 +714,7 @@ export default function MatchManage() {
                     </DndContext>
 
                     <div className="pt-8 border-t border-border-subtle">
-                        <Button className="w-full h-16 uppercase font-black tracking-[0.2em] shadow-2xl shadow-accent-green/20">
+                        <Button onClick={handlePublishTeams} className="w-full h-16 uppercase font-black tracking-[0.2em] shadow-2xl shadow-accent-green/20">
                            Valider et Publier ces équipes
                         </Button>
                     </div>

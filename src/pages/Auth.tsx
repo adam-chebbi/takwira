@@ -37,7 +37,7 @@ const TUNISIAN_GOVERNORATES = [
 export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
+  const toast = useToast();
   const [currentStep, setCurrentStep] = React.useState<Step>('PHONE');
   const [phoneNumber, setPhoneNumber] = React.useState('');
   const [otp, setOtp] = React.useState(['', '', '', '', '', '']);
@@ -296,7 +296,7 @@ export default function Auth() {
                 {otp.map((digit, i) => (
                   <input
                     key={i}
-                    ref={el => otpRefs.current[i] = el}
+                    ref={(el) => { otpRefs.current[i] = el; }}
                     type="text"
                     maxLength={1}
                     value={digit}

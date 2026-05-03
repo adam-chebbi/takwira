@@ -21,6 +21,7 @@ import {
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { Badge } from '@/src/components/ui/Badge';
+import { trackReservationSubmitted } from '@/src/lib/googleAds';
 import { cn } from '@/src/lib/utils';
 
 // --- Types ---
@@ -153,7 +154,7 @@ export default function ReservationFlow() {
       setErrors({});
     }
     
-    if (step < 3) {
+    if (typeof step === 'number' && step < 3) {
       setStep((prev) => (prev as number) + 1 as Step);
     } else {
       confirmReservation();
@@ -165,12 +166,13 @@ export default function ReservationFlow() {
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
+      trackReservationSubmitted();
       setStep('success');
     }, 1500);
   };
 
   const handleBack = () => {
-    if (step > 1 && step !== 'success') {
+    if (typeof step === 'number' && step > 1) {
       setStep((prev) => (prev as number) - 1 as Step);
     } else {
       navigate(-1);

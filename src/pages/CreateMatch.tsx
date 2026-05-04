@@ -114,7 +114,7 @@ export default function CreateMatch() {
     <div className="min-h-screen pt-24 pb-20 px-4 md:px-6">
       <div className="max-w-xl mx-auto">
         <div className="mb-8 space-y-2">
-          <h1 className="text-3xl font-display font-black uppercase tracking-tight text-white italic">Organiser un match</h1>
+          <h1 className="text-3xl font-display font-black uppercase tracking-tight text-pl-purple italic">Organiser un match</h1>
           <p className="text-text-tertiary text-sm">Crée ton match, partage le lien et laisse Takwira gérer le reste.</p>
         </div>
 

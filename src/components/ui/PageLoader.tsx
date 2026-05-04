@@ -27,8 +27,9 @@ export const PageLoader = () => {
         }}
         className="flex flex-col items-center gap-4"
       >
-        <div className="text-4xl font-display font-black tracking-tighter text-white">
-          TAKWIRA<span className="text-accent-green">.COM</span>
+        <div className="flex items-center group" aria-label="Takwira.com">
+          <span className="text-4xl font-display font-black tracking-tighter text-pl-purple">TAKWIRA</span>
+          <span className="text-4xl font-display font-black tracking-tighter text-pl-pink">.</span>
         </div>
         <div className="w-12 h-0.5 bg-accent-green rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
       </motion.div>

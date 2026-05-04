@@ -135,18 +135,17 @@ function SidebarContent({ userProfile, onLogout, onClose }: { userProfile: any; 
   return (
     <div className="flex flex-col h-full py-8">
       {/* Logo */}
-      <div className="px-8 mb-12">
-        <div className="text-2xl font-display font-black italic tracking-tighter text-blue-500 bg-black px-3 py-1 rounded-sm skew-x-[-10deg] w-max mb-6">
-          TAKWIRA<span className="text-white">.COM</span>
-        </div>
+      <Link to="/" className="flex items-center group mb-8" aria-label="Takwira.com Home">
+        <span className="text-2xl font-display font-black tracking-tighter text-pl-purple">TAKWIRA</span>
+        <span className="text-2xl font-display font-black tracking-tighter text-pl-pink">.</span>
+      </Link>
         
-        <div className="space-y-1">
+        <div className="space-y-1 px-8">
            <h3 className="text-lg font-display font-black uppercase tracking-tight text-white">Operations Center</h3>
            <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 uppercase font-black text-[9px] tracking-widest h-6">
              Accès Maître
            </Badge>
         </div>
-      </div>
 
       {/* Nav */}
       <nav className="flex-1 space-y-1">

@@ -1,0 +1,39 @@
+{
+  "name": "Takwira.com",
+  "short_name": "Takwira",
+  "description": "Organise tes matchs de football en Tunisie",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0F",
+  "theme_color": "#00FF87",
+  "orientation": "portrait-primary",
+  "categories": ["sports", "utilities"],
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Gère tes matchs facilement"
+    }
+  ]
+}

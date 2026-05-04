@@ -23,7 +23,7 @@ export default function HelpCenter() {
     <div className="pt-32 pb-20 px-6 md:px-12 max-w-7xl mx-auto space-y-20">
       {/* Hero Section */}
       <div className="text-center space-y-8 max-w-2xl mx-auto">
-        <h1 className="text-5xl md:text-6xl font-display font-black uppercase tracking-tight leading-none text-white">
+        <h1 className="text-5xl md:text-6xl font-display font-black uppercase tracking-tight leading-none text-pl-purple">
           Centre d'aide
         </h1>
         <p className="text-text-secondary text-lg font-medium">
@@ -34,7 +34,7 @@ export default function HelpCenter() {
           <input 
             type="text" 
             placeholder="Rechercher un sujet ou un mot-clé..."
-            className="w-full bg-background-secondary border border-border-subtle rounded-2xl h-16 pl-14 pr-6 focus:border-accent-green outline-none transition-all text-white"
+            className="w-full bg-background-secondary border border-border-subtle rounded-2xl h-16 pl-14 pr-6 focus:border-accent-green outline-none transition-all text-text-primary"
           />
         </div>
       </div>
@@ -46,7 +46,7 @@ export default function HelpCenter() {
             <div className="w-14 h-14 rounded-2xl bg-background-secondary border border-border-subtle flex items-center justify-center text-accent-green mb-6 group-hover:scale-110 transition-transform">
               <cat.icon size={28} />
             </div>
-            <h3 className="text-xl font-display font-black uppercase tracking-tight text-white mb-2">{cat.title}</h3>
+            <h3 className="text-xl font-display font-black uppercase tracking-tight text-pl-purple mb-2">{cat.title}</h3>
             <p className="text-text-secondary text-sm font-medium mb-4">{cat.description}</p>
             <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
               <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">{cat.count} ARTICLES</span>
@@ -63,7 +63,7 @@ export default function HelpCenter() {
           {FAQS.map((faq, i) => (
             <details key={i} className="group bg-background-card border border-border-subtle rounded-2xl overflow-hidden">
               <summary className="p-6 flex items-center justify-between cursor-pointer hover:bg-background-secondary transition-colors">
-                <span className="font-bold text-white uppercase tracking-wider text-sm">{faq.q}</span>
+                <span className="font-bold text-pl-purple uppercase tracking-wider text-sm">{faq.q}</span>
                 <ChevronRight className="group-open:rotate-90 transition-transform text-text-tertiary" size={18} />
               </summary>
               <div className="px-6 pb-6 text-text-secondary text-sm font-medium leading-relaxed">

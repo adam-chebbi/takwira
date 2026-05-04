@@ -4,7 +4,7 @@ import { cn } from '@/src/lib/utils';
 interface BadgeProps {
   label?: string;
   children?: React.ReactNode;
-  variant?: 'success' | 'warning' | 'danger' | 'default' | 'green' | 'primary' | 'outline';
+  variant?: 'success' | 'warning' | 'danger' | 'default' | 'green' | 'primary' | 'outline' | 'purple';
   size?: 'sm' | 'md';
   className?: string;
 }
@@ -17,12 +17,13 @@ export function Badge({
   className 
 }: BadgeProps) {
   const variants = {
-    success: "bg-accent-green/15 text-accent-green border-accent-green/20",
-    warning: "bg-warning/15 text-warning border-warning/20",
-    danger: "bg-danger/15 text-danger border-danger/20",
-    default: "bg-background-secondary text-text-tertiary border-border-subtle",
-    green: "bg-accent-green text-black border-accent-green",
-    primary: "bg-accent-green/10 text-accent-green border-accent-green/20",
+    success: "bg-pl-green/15 text-pl-purple border-pl-green/20",
+    warning: "bg-orange-500/15 text-orange-600 border-orange-500/20",
+    danger: "bg-red-500/15 text-red-600 border-red-500/20",
+    default: "bg-white text-text-secondary border-border-subtle",
+    green: "bg-pl-green text-pl-purple border-pl-green",
+    primary: "bg-pl-purple/10 text-pl-purple border-pl-purple/20",
+    purple: "bg-pl-purple text-white border-pl-purple",
     outline: "bg-transparent text-text-secondary border-border-subtle",
   };
 
@@ -33,7 +34,7 @@ export function Badge({
 
   return (
     <span className={cn(
-      "inline-flex items-center justify-center font-semibold rounded-full border transition-all",
+      "inline-flex items-center justify-center font-bold uppercase tracking-wider rounded-badge border transition-all",
       variants[variant as keyof typeof variants] || variants.default,
       sizes[size],
       className

@@ -23,7 +23,7 @@ export function BlogPostCard({ post }: BlogPostCardProps) {
       className="group"
     >
       <Link to={`/blog/${post.slug}`} className="block h-full">
-        <div className="bg-background-card border border-border-subtle rounded-[24px] overflow-hidden hover:border-accent-green/30 transition-all duration-500 h-full flex flex-col">
+        <div className="bg-white border border-border-subtle rounded-[24px] overflow-hidden hover:border-pl-purple/30 transition-all duration-500 h-full flex flex-col shadow-pl">
           {/* Image Container */}
           <div className="aspect-[16/9] overflow-hidden relative">
             <img 
@@ -33,13 +33,13 @@ export function BlogPostCard({ post }: BlogPostCardProps) {
             />
             {/* Category Overlay */}
             <div className="absolute top-4 left-4 z-10">
-              <Badge className="bg-accent-green text-black border-none font-black text-[9px] uppercase tracking-widest h-7 px-3">
+              <Badge variant="purple" className="shadow-md text-[9px] h-7 px-3">
                 {post.category}
               </Badge>
             </div>
             {/* Read Time Overlay */}
             <div className="absolute top-4 right-4 z-10">
-              <div className="bg-black/50 backdrop-blur-md text-white border-none font-black text-[9px] uppercase tracking-widest h-7 px-3 rounded-full flex items-center gap-1.5">
+              <div className="bg-[#faf9fa]/80 backdrop-blur-md text-pl-purple border border-border-subtle font-bold text-[9px] uppercase tracking-widest h-7 px-3 rounded-full flex items-center gap-1.5 shadow-sm">
                 <Clock size={10} /> {post.readTime}
               </div>
             </div>
@@ -47,11 +47,11 @@ export function BlogPostCard({ post }: BlogPostCardProps) {
 
           {/* Content */}
           <div className="p-6 md:p-8 flex-1 flex flex-col">
-            <h3 className="text-2xl font-display font-black uppercase tracking-tight text-white mb-3 group-hover:text-accent-green transition-colors line-clamp-2 leading-none">
+            <h3 className="text-2xl font-display font-extrabold uppercase tracking-tight text-pl-purple mb-3 group-hover:text-pl-pink transition-colors line-clamp-2 leading-none">
               {post.title}
             </h3>
             
-            <p className="text-text-secondary text-sm line-clamp-3 mb-6 flex-1">
+            <p className="text-text-secondary text-sm line-clamp-3 mb-6 flex-1 font-sans">
               {post.excerpt}
             </p>
 
@@ -60,17 +60,17 @@ export function BlogPostCard({ post }: BlogPostCardProps) {
                 {post.authorAvatarUrl ? (
                   <img src={post.authorAvatarUrl} className="w-8 h-8 rounded-full object-cover border border-border-subtle" alt={post.authorName} />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-background-secondary flex items-center justify-center text-[10px] font-black text-text-tertiary border border-border-subtle">
+                  <div className="w-8 h-8 rounded-full bg-background-primary flex items-center justify-center text-[10px] font-bold text-pl-purple border border-border-subtle">
                     {post.authorName.charAt(0)}
                   </div>
                 )}
-                <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
                   {post.authorName}
                 </span>
               </div>
               
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary">
-                <Calendar size={12} className="text-accent-green" />
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                <Calendar size={12} className="text-pl-purple" />
                 {format(publishedDate, 'dd MMM yyyy', { locale: fr })}
               </div>
             </div>

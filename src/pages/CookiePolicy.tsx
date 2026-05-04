@@ -18,7 +18,7 @@ export default function CookiePolicy() {
           className="space-y-12"
         >
           <div className="space-y-4">
-            <h1 className="text-4xl md:text-6xl font-display font-black uppercase tracking-tight text-white">
+            <h1 className="text-4xl md:text-6xl font-display font-black uppercase tracking-tight text-pl-purple">
               Politique des Cookies
             </h1>
             <p className="text-text-secondary text-lg">
@@ -27,7 +27,7 @@ export default function CookiePolicy() {
           </div>
 
           <section className="space-y-8 bg-background-card border border-border-subtle rounded-[40px] p-8 md:p-12">
-            <div className="prose prose-invert max-w-none">
+            <div className="prose max-w-none">
               <p className="text-text-secondary">
                 Tunisian law (INPDP) requires explicit consent for analytics and advertising cookies. 
                 Nous attachons une importance capitale à votre vie privée. Cette page vous explique quels 
@@ -62,7 +62,7 @@ export default function CookiePolicy() {
           </section>
 
           <section className="space-y-6">
-            <h2 className="text-2xl font-display font-black uppercase text-white">Détail des cookies utilisés</h2>
+            <h2 className="text-2xl font-display font-black uppercase text-pl-purple">Détail des cookies utilisés</h2>
             <div className="overflow-x-auto rounded-3xl border border-border-subtle overflow-hidden bg-background-card">
               <table className="w-full text-left">
                 <thead>
@@ -97,7 +97,7 @@ function CookieTypeCard({ icon: Icon, title, desc, active, onChange, isLocked, s
       </div>
       <div className="flex-1 space-y-1 text-center md:text-left">
         <div className="flex items-center justify-center md:justify-start gap-2">
-          <h3 className="text-lg font-bold text-white tracking-tight">{title}</h3>
+          <h3 className="text-lg font-bold text-pl-purple tracking-tight">{title}</h3>
           {isLocked && <Badge className="bg-text-tertiary/10 text-text-tertiary border-none text-[8px] font-black uppercase h-4">Requis</Badge>}
         </div>
         <p className="text-xs text-text-secondary leading-relaxed max-w-xl">
@@ -129,7 +129,7 @@ function CookieTypeCard({ icon: Icon, title, desc, active, onChange, isLocked, s
 function CookieRow({ name, provider, purpose, duration, category }: any) {
   return (
     <tr className="text-xs">
-      <td className="px-6 py-4 font-mono text-white">{name}</td>
+      <td className="px-6 py-4 font-mono text-pl-purple">{name}</td>
       <td className="px-6 py-4 text-text-secondary">{provider}</td>
       <td className="px-6 py-4 text-text-secondary">{purpose}</td>
       <td className="px-6 py-4 text-text-tertiary">{duration}</td>

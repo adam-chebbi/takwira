@@ -6,9 +6,12 @@ export interface User {
   id: string;
   phone: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   role: UserRole;
   city: string;
   avatarUrl?: string;
+  avatarColor?: string;
   createdAt: Timestamp;
   isActive: boolean;
 }

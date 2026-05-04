@@ -77,7 +77,7 @@ export default function MyMatches() {
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
-            <h1 className="text-4xl font-display font-black uppercase tracking-tight text-white italic">Mes Matchs</h1>
+            <h1 className="text-4xl font-display font-black uppercase tracking-tight text-pl-purple italic">Mes Matchs</h1>
             <p className="text-text-tertiary">Retrouve tes sessions organisées et tes convocations.</p>
           </div>
           
@@ -121,7 +121,7 @@ export default function MyMatches() {
                           <Badge variant="outline" className="bg-background-secondary border-border-subtle text-[10px] uppercase tracking-widest font-black">
                             {match.format}
                           </Badge>
-                          <h3 className="text-lg font-display font-black text-white italic uppercase tracking-tight line-clamp-1">{match.title}</h3>
+                          <h3 className="text-lg font-display font-black text-pl-purple italic uppercase tracking-tight line-clamp-1">{match.title}</h3>
                         </div>
                         <div className={cn(
                           "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
@@ -181,7 +181,7 @@ export default function MyMatches() {
                   <Users size={32} className="opacity-20" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl font-display font-black uppercase italic text-white">Aucun match trouvé</h3>
+                  <h3 className="text-xl font-display font-black uppercase italic text-pl-purple">Aucun match trouvé</h3>
                   <p className="text-text-tertiary text-sm">Tu n'as pas encore de matchs dans cette catégorie.</p>
                 </div>
                 <Button onClick={() => navigate('/creer-match')} className="uppercase font-black tracking-widest h-14 px-8">

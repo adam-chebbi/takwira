@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Loader2, 
@@ -25,8 +25,9 @@ import { Card } from '@/src/components/ui/Card';
 import { useToast } from '@/src/components/ui/Toast';
 import { UserRole } from '@/src/lib/schema';
 import { cn } from '@/src/lib/utils';
+import OnboardingFlow, { OnboardingData } from '@/src/components/auth/OnboardingFlow';
 
-type Step = 'PHONE' | 'OTP' | 'ROLE' | 'SETUP' | 'ADMIN';
+type Step = 'PHONE' | 'OTP' | 'ONBOARDING' | 'ADMIN';
 
 const TUNISIAN_GOVERNORATES = [
   "Tunis", "Ariana", "Ben Arous", "Manouba", "Bizerte", "Nabeul", "Zaghouan", "Béja", 
@@ -129,7 +130,7 @@ export default function Auth() {
         else navigate(from);
       } else {
         setIsNewUser(true);
-        setCurrentStep('ROLE');
+        setCurrentStep('ONBOARDING');
       }
     } catch (error: any) {
       setShake(true);
@@ -142,8 +143,8 @@ export default function Auth() {
     }
   };
 
-  const handleFinalSetup = async () => {
-    if (!fullName || !city || !selectedRole || !auth.currentUser) return;
+  const handleOnboardingComplete = async (onboardingData: OnboardingData) => {
+    if (!auth.currentUser) return;
     
     setIsLoading(true);
     try {
@@ -151,21 +152,27 @@ export default function Auth() {
       const userData = {
         id: user.uid,
         phone: user.phoneNumber || '',
-        name: fullName,
-        role: selectedRole,
-        city: city,
+        name: `${onboardingData.firstName} ${onboardingData.lastName}`,
+        firstName: onboardingData.firstName,
+        lastName: onboardingData.lastName,
+        role: onboardingData.role,
+        city: onboardingData.city,
+        avatarColor: onboardingData.avatarColor,
+        jerseyColor: onboardingData.jerseyColor,
+        jerseyName: onboardingData.jerseyName,
+        jerseyNumber: onboardingData.jerseyNumber,
         isActive: true,
         createdAt: serverTimestamp()
       };
       
       await setDoc(doc(db, 'users', user.uid), userData);
       
-      toast("Profil créé avec succès !", 'success');
+      toast(`Bienvenue sur Takwira, ${onboardingData.firstName} ! 🎉`, 'success');
       
-      if (selectedRole === 'manager') navigate('/inscription-gerant');
-      else navigate('/');
+      if (onboardingData.role === 'manager') navigate('/inscription-gerant');
+      else navigate('/', { state: { fromOnboarding: true } });
     } catch (error) {
-      toast.error("Erreur lors de la création du profil");
+      toast("Erreur lors de la création du profil", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -207,9 +214,10 @@ export default function Auth() {
           transition={{ type: "spring", damping: 12, stiffness: 100 }}
           className="flex justify-center mb-10"
         >
-          <div className="text-3xl font-display font-black italic tracking-tighter text-accent-green bg-black px-4 py-1 rounded-sm skew-x-[-10deg]">
-            TAKWIRA<span className="text-white">.COM</span>
-          </div>
+          <Link to="/" className="flex items-center group" aria-label="Takwira.com Home">
+            <span className="text-3xl font-display font-black tracking-tighter text-pl-purple">TAKWIRA</span>
+            <span className="text-3xl font-display font-black tracking-tighter text-pl-pink">.</span>
+          </Link>
         </motion.div>
 
         <AnimatePresence mode="wait">
@@ -288,7 +296,7 @@ export default function Auth() {
                 </button>
                 <h2 className="text-3xl font-display font-black uppercase tracking-tight">Code SMS</h2>
                 <p className="text-text-secondary text-sm font-medium">
-                  Saisis le code envoyé au <span className="text-white">+216 {phoneNumber}</span>
+                  Saisis le code envoyé au <span className="text-pl-purple font-bold">+216 {phoneNumber}</span>
                 </p>
               </div>
 
@@ -331,130 +339,11 @@ export default function Auth() {
             </motion.div>
           )}
 
-          {currentStep === 'ROLE' && (
-            <motion.div 
-              key="role"
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -20, opacity: 0 }}
-              className="space-y-8"
-            >
-              <div className="text-center md:text-left space-y-1">
-                <h2 className="text-3xl font-display font-black uppercase tracking-tight">Bienvenue !</h2>
-                <p className="text-text-secondary text-sm font-medium">Quel est ton rôle sur Takwira ?</p>
-              </div>
-
-              <div className="space-y-4">
-                 <button 
-                  onClick={() => {
-                    setSelectedRole('player');
-                    setCurrentStep('SETUP');
-                  }}
-                  className="w-full group outline-none"
-                 >
-                   <Card className={cn(
-                     "p-6 md:p-8 flex items-center gap-6 border-border-subtle transition-all group-hover:scale-[1.02] active:scale-[0.98]",
-                     selectedRole === 'player' && "border-accent-green bg-accent-green/5"
-                   )}>
-                      <div className="w-16 h-16 rounded-2xl bg-accent-green/10 flex items-center justify-center text-accent-green group-hover:bg-accent-green group-hover:text-black transition-colors">
-                         <Users size={32} />
-                      </div>
-                      <div className="text-left space-y-1">
-                         <h4 className="font-display font-black uppercase tracking-tight text-xl leading-none">Joueur</h4>
-                         <p className="text-xs text-text-secondary leading-tight">Je veux réserver des terrains et participer à des matchs.</p>
-                      </div>
-                   </Card>
-                 </button>
-
-                 <button 
-                  onClick={() => {
-                    setSelectedRole('manager');
-                    setCurrentStep('SETUP');
-                  }}
-                  className="w-full group outline-none"
-                 >
-                   <Card className={cn(
-                     "p-6 md:p-8 flex items-center gap-6 border-border-subtle transition-all group-hover:scale-[1.02] active:scale-[0.98]",
-                     selectedRole === 'manager' && "border-accent-green bg-accent-green/5"
-                   )}>
-                      <div className="w-16 h-16 rounded-2xl bg-background-secondary border border-border-subtle flex items-center justify-center text-text-tertiary group-hover:bg-accent-green group-hover:text-black transition-colors">
-                         <Building2 size={32} />
-                      </div>
-                      <div className="text-left space-y-1">
-                         <h4 className="font-display font-black uppercase tracking-tight text-xl leading-none">Gérant</h4>
-                         <p className="text-xs text-text-secondary leading-tight">Je possède un complexe et je souhaite gérer mes réservations.</p>
-                      </div>
-                   </Card>
-                 </button>
-              </div>
-            </motion.div>
-          )}
-
-          {currentStep === 'SETUP' && (
-            <motion.div 
-              key="setup"
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -20, opacity: 0 }}
-              className="space-y-8"
-            >
-              <div className="text-center md:text-left space-y-1">
-                <button 
-                  onClick={() => setCurrentStep('ROLE')}
-                  className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-accent-green mb-4"
-                >
-                  <ArrowLeft size={12} /> Retour
-                </button>
-                <h2 className="text-3xl font-display font-black uppercase tracking-tight text-accent-green">Dernière étape</h2>
-                <p className="text-text-secondary text-sm font-medium">Complète ton profil pour t'inscrire.</p>
-              </div>
-
-              <div className="space-y-5">
-                <div className="space-y-2">
-                   <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary ml-1">Ton nom complet</label>
-                   <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary group-focus-within:text-accent-green transition-colors">
-                         <Smartphone size={18} />
-                      </div>
-                      <input 
-                        type="text"
-                        required
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl pl-12 pr-4 h-14 font-sans text-sm transition-all"
-                        placeholder="Ahmed Ben Ali"
-                      />
-                   </div>
-                </div>
-
-                <div className="space-y-2">
-                   <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary ml-1">Ta ville</label>
-                   <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary group-focus-within:text-accent-green transition-colors pointer-events-none">
-                         <MapPin size={18} />
-                      </div>
-                      <select 
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl pl-12 pr-4 h-14 font-sans text-sm appearance-none transition-all"
-                      >
-                         <option value="">Sélectionne ta ville</option>
-                         {TUNISIAN_GOVERNORATES.map(gov => (
-                           <option key={gov} value={gov}>{gov}</option>
-                         ))}
-                      </select>
-                   </div>
-                </div>
-              </div>
-
-              <Button 
-                onClick={handleFinalSetup}
-                disabled={isLoading || !fullName || !city}
-                className="w-full h-16 font-black uppercase tracking-widest"
-              >
-                {isLoading ? <Loader2 className="animate-spin" /> : "Commencer l'aventure"}
-              </Button>
-            </motion.div>
+          {currentStep === 'ONBOARDING' && (
+            <OnboardingFlow 
+              onComplete={handleOnboardingComplete}
+              onCancel={() => setCurrentStep('PHONE')}
+            />
           )}
 
           {currentStep === 'ADMIN' && (

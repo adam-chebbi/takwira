@@ -20,7 +20,7 @@ export default function Tournaments() {
             Compétition
           </Badge>
         </div>
-        <h1 className="text-5xl md:text-7xl font-display font-black uppercase tracking-tight leading-none text-white">
+        <h1 className="text-5xl md:text-7xl font-display font-black uppercase tracking-tight leading-none text-pl-purple">
           Tournois <span className="text-accent-green">Légendaires</span>
         </h1>
         <p className="text-text-secondary text-lg font-medium leading-relaxed">
@@ -36,7 +36,7 @@ export default function Tournaments() {
         ) : tournaments.length === 0 ? (
           <div className="col-span-full py-20 text-center space-y-4">
             <Trophy size={48} className="mx-auto text-text-tertiary" />
-            <h3 className="text-xl font-display font-black uppercase text-white">Aucun tournoi pour le moment</h3>
+            <h3 className="text-xl font-display font-black uppercase text-pl-purple">Aucun tournoi pour le moment</h3>
             <p className="text-text-tertiary">Revenez bientôt pour de nouvelles compétitions.</p>
           </div>
         ) : tournaments.map((t, i) => (
@@ -62,7 +62,7 @@ export default function Tournaments() {
 
               <div className="p-8 flex-1 flex flex-col gap-6">
                 <div className="space-y-2">
-                  <h3 className="text-2xl font-display font-black uppercase tracking-tight text-white line-clamp-1">{t.title}</h3>
+                  <h3 className="text-2xl font-display font-black uppercase tracking-tight text-pl-purple line-clamp-1">{t.title}</h3>
                   <div className="flex items-center gap-2 text-text-tertiary text-xs font-bold uppercase tracking-widest">
                     <MapPin size={14} className="text-accent-green" /> {t.locationName}
                   </div>
@@ -71,11 +71,11 @@ export default function Tournaments() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-background-secondary/50 p-4 rounded-xl border border-border-subtle/50">
                     <p className="text-[9px] font-black text-text-tertiary uppercase tracking-widest mb-1">Format</p>
-                    <p className="text-sm font-black text-white uppercase">{t.format}</p>
+                    <p className="text-sm font-black text-pl-purple uppercase">{t.format}</p>
                   </div>
                   <div className="bg-background-secondary/50 p-4 rounded-xl border border-border-subtle/50">
                     <p className="text-[9px] font-black text-text-tertiary uppercase tracking-widest mb-1">Équipes</p>
-                    <p className="text-sm font-black text-white uppercase">{t.currentTeams}/{t.maxTeams}</p>
+                    <p className="text-sm font-black text-pl-purple uppercase">{t.currentTeams}/{t.maxTeams}</p>
                   </div>
                 </div>
 
@@ -87,7 +87,7 @@ export default function Tournaments() {
                          </div>
                          <div>
                             <p className="text-[9px] font-black text-text-tertiary uppercase tracking-widest">Date</p>
-                            <p className="text-xs font-black text-white uppercase">{t.startDate}</p>
+                            <p className="text-xs font-black text-pl-purple uppercase">{t.startDate}</p>
                          </div>
                       </div>
                       <div className="text-right">

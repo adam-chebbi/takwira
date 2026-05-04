@@ -17,7 +17,7 @@ export default function Matches() {
       <SEO title="Matchs Ouverts | Takwira.com" description="Trouve des joueurs et rejoins un match de foot près de chez toi en Tunisie." />
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div className="space-y-4">
-          <h1 className="text-5xl md:text-7xl font-display font-black uppercase tracking-tight leading-none text-white">
+          <h1 className="text-5xl md:text-7xl font-display font-black uppercase tracking-tight leading-none text-pl-purple">
             Matchs <span className="text-accent-green">Ouverts</span>
           </h1>
           <p className="text-text-secondary text-lg font-medium max-w-xl">
@@ -54,7 +54,7 @@ export default function Matches() {
           <input 
             type="text" 
             placeholder="Ville, complexe ou niveau..."
-            className="w-full bg-background-secondary border border-border-subtle rounded-2xl h-14 pl-12 pr-6 outline-none focus:border-accent-green transition-all text-white"
+            className="w-full bg-background-secondary border border-border-subtle rounded-2xl h-14 pl-12 pr-6 outline-none focus:border-accent-green transition-all text-text-primary"
           />
         </div>
       </div>
@@ -68,7 +68,7 @@ export default function Matches() {
         ) : matches.length === 0 ? (
           <div className="col-span-full py-20 text-center space-y-4">
             <Users size={48} className="mx-auto text-text-tertiary" />
-            <h3 className="text-xl font-display font-black uppercase text-white">Aucun match trouvé</h3>
+            <h3 className="text-xl font-display font-black uppercase text-pl-purple">Aucun match trouvé</h3>
             <p className="text-text-tertiary">Il n'y a pas de match ouvert pour le moment.</p>
           </div>
         ) : matches.map((match, i) => (
@@ -84,12 +84,12 @@ export default function Matches() {
                   Match Amical
                 </Badge>
                 <div className="text-right">
-                  <p className="text-2xl font-display font-black text-white">{match.format}</p>
+                  <p className="text-2xl font-display font-black text-pl-purple">{match.format}</p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-2xl font-display font-black uppercase tracking-tight text-white group-hover:text-accent-green transition-colors">
+                <h3 className="text-2xl font-display font-black uppercase tracking-tight text-pl-purple group-hover:text-accent-green transition-colors">
                   {match.title}
                 </h3>
                 <div className="flex flex-col gap-2">

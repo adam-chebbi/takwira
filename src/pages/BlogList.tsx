@@ -24,10 +24,11 @@ export default function BlogList() {
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-[clamp(48px,10vw,120px)] font-display font-black uppercase leading-[0.85] tracking-tighter"
+            className="text-[clamp(48px,10vw,120px)] font-display font-extrabold uppercase leading-[0.85] tracking-tighter"
           >
-            <span className="text-white">Le Blog</span> <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-green to-white">Takwira</span>
+            <span className="text-pl-purple uppercase">LE BLOG</span> <br />
+            <span className="text-pl-purple uppercase">TAKWIRA</span>
+            <span className="text-pl-pink">.</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0 }}
@@ -46,10 +47,10 @@ export default function BlogList() {
               key={cat}
               onClick={() => setSelectedCategory(cat)}
               className={cn(
-                "h-10 px-6 rounded-full text-[10px] font-black uppercase tracking-widest transition-all",
+                "h-10 px-6 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border",
                 selectedCategory === cat
-                  ? "bg-accent-green text-black scale-105 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
-                  : "bg-background-card text-text-tertiary hover:text-white border border-border-subtle"
+                  ? "bg-pl-purple text-white border-pl-purple shadow-pl"
+                  : "bg-white text-text-muted hover:text-pl-purple border-border-subtle"
               )}
             >
               {cat}
@@ -63,9 +64,9 @@ export default function BlogList() {
             {posts.map((post, index) => (
               <React.Fragment key={post.id}>
                 <BlogPostCard post={post} />
-                {index === 5 && (
+                {index === 2 && (
                   <div className="col-span-full py-8">
-                    <AdSlot position="blog_list_between" className="h-[200px] md:h-[300px]" />
+                    <AdSlot position="blog_list_between" className="h-[90px]" />
                   </div>
                 )}
               </React.Fragment>
@@ -76,16 +77,16 @@ export default function BlogList() {
         {/* Loading State / Load More */}
         {loading && posts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-4">
-            <Loader2 size={48} className="text-accent-green animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Chargement du terrain...</p>
+            <Loader2 size={48} className="text-pl-purple animate-spin" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Chargement du terrain...</p>
           </div>
         ) : posts.length === 0 ? (
           <div className="text-center py-32 space-y-6">
-            <div className="w-20 h-20 bg-background-card border border-border-subtle rounded-3xl flex items-center justify-center text-text-tertiary mx-auto opacity-20">
+            <div className="w-20 h-20 bg-white border border-border-subtle rounded-3xl flex items-center justify-center text-text-muted mx-auto opacity-20 shadow-sm">
               <Search size={40} />
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-display font-black uppercase tracking-tight text-white">Aucun article trouvé</h3>
+              <h3 className="text-xl font-display font-extrabold uppercase tracking-tight text-pl-purple">Aucun article trouvé</h3>
               <p className="text-text-secondary text-sm">Essaie de changer de catégorie ou reviens plus tard.</p>
             </div>
           </div>
@@ -96,7 +97,7 @@ export default function BlogList() {
             <Button 
               onClick={loadMore}
               variant="outline" 
-              className="h-14 px-12 border-border-subtle text-[11px] font-black uppercase tracking-widest hover:border-accent-green group"
+              className="h-14 px-12 border-pl-purple text-pl-purple text-[11px] font-bold uppercase tracking-widest hover:bg-pl-purple hover:text-white group"
             >
               Charger plus d'articles
               <Loader2 className="ml-2 w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />

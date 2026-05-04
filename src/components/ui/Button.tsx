@@ -14,11 +14,11 @@ interface ButtonProps extends HTMLMotionProps<'button'> {
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', fullWidth = false, asChild = false, loading = false, ...props }, ref) => {
     const variants = {
-      primary: 'bg-accent-green text-background-primary hover:bg-accent-green-dark shadow-lg shadow-accent-green/10',
-      secondary: 'bg-background-secondary text-text-primary hover:bg-background-card',
-      outline: 'border-1.5 border-accent-green text-accent-green hover:bg-accent-green/10',
-      ghost: 'hover:bg-background-secondary text-text-secondary hover:text-text-primary',
-      danger: 'bg-danger text-white hover:opacity-90',
+      primary: 'bg-pl-purple text-white hover:bg-pl-purple-dark shadow-pl',
+      secondary: 'bg-pl-green text-pl-purple hover:bg-pl-green/90 shadow-pl',
+      outline: 'border-2 border-pl-purple text-pl-purple hover:bg-pl-purple hover:text-white',
+      ghost: 'text-text-secondary hover:bg-pl-purple/5 hover:text-pl-purple',
+      danger: 'bg-red-500 text-white hover:bg-red-600 shadow-pl',
     };
 
     const sizes = {
@@ -63,7 +63,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         transition={{ duration: 0.15 }}
         disabled={loading || props.disabled}
         className={cn(
-          'inline-flex items-center justify-center rounded-button font-sans font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-accent-green/50 disabled:opacity-50 disabled:pointer-events-none relative',
+          'inline-flex items-center justify-center rounded-button font-display font-bold uppercase tracking-wider transition-all focus:outline-none focus:ring-2 focus:ring-pl-purple/50 disabled:opacity-50 disabled:pointer-events-none relative',
           fullWidth && 'w-full',
           variants[variant],
           sizes[size],

@@ -19,7 +19,7 @@ export default function About() {
       {/* Hero */}
       <section className="px-6 md:px-12 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         <div className="space-y-8">
-           <h1 className="text-5xl md:text-7xl font-display font-black uppercase tracking-tight leading-none text-white">
+           <h1 className="text-5xl md:text-7xl font-display font-black uppercase tracking-tight leading-none text-pl-purple">
              La révolution <br/> <span className="text-accent-green">du foot amateur</span>
            </h1>
            <p className="text-text-secondary text-lg font-medium leading-relaxed max-w-xl">
@@ -68,7 +68,7 @@ export default function About() {
              { label: 'Villes', value: '12' },
            ].map((stat, i) => (
              <div key={i} className="text-center space-y-2">
-                <p className="text-4xl md:text-6xl font-display font-black text-white">{stat.value}</p>
+                <p className="text-4xl md:text-6xl font-display font-black text-pl-purple">{stat.value}</p>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-green">{stat.label}</p>
              </div>
            ))}
@@ -79,7 +79,7 @@ export default function About() {
       <section className="px-6 md:px-12 max-w-7xl mx-auto">
          <div className="bg-background-card border border-border-subtle rounded-[50px] p-12 md:p-20 text-center space-y-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-accent-green/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <h2 className="text-4xl md:text-6xl font-display font-black uppercase tracking-tight text-white max-w-2xl mx-auto leading-none">
+            <h2 className="text-4xl md:text-6xl font-display font-black uppercase tracking-tight text-pl-purple max-w-2xl mx-auto leading-none">
                Prêt à fouler <br/> la pelouse ?
             </h2>
             <p className="text-text-secondary max-w-lg mx-auto">

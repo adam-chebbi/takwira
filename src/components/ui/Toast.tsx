@@ -9,11 +9,15 @@ interface Toast {
   id: string;
   message: string;
   type: ToastType;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 interface ToastContextType {
-  (message: string, type?: ToastType): void;
-  toast: (message: string, type?: ToastType) => void;
+  (message: string, type?: ToastType, action?: Toast['action']): void;
+  toast: (message: string, type?: ToastType, action?: Toast['action']) => void;
   success: (message: string) => void;
   error: (message: string) => void;
   warning: (message: string) => void;
@@ -25,12 +29,14 @@ const ToastContext = React.createContext<ToastContextType | undefined>(undefined
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<Toast[]>([]);
 
-  const toast = React.useCallback((message: string, type: ToastType = 'info') => {
+  const toast = React.useCallback((message: string, type: ToastType = 'info', action?: Toast['action']) => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message, type }]);
+    setToasts((prev) => [...prev, { id, message, type, action }]);
+    
+    // Auto-dismiss after 4s (longer if there's an action?)
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    }, 5000);
   }, []);
 
   const success = React.useCallback((message: string) => toast(message, 'success'), [toast]);
@@ -87,8 +93,22 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void; key?
       className="pointer-events-auto bg-background-card border border-border-subtle p-4 rounded-xl shadow-2xl flex items-center gap-4 min-w-[300px] max-w-sm relative overflow-hidden"
     >
       <div className="shrink-0">{icons[toast.type]}</div>
-      <p className="flex-1 text-sm font-medium text-white line-clamp-2">{toast.message}</p>
-      <button onClick={onClose} className="text-text-tertiary hover:text-white transition-colors">
+      <div className="flex-1 flex flex-col gap-1 min-w-0">
+        <p className="text-sm font-bold text-white line-clamp-2">{toast.message}</p>
+        {toast.action && (
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              toast.action?.onClick();
+              onClose();
+            }}
+            className="text-[10px] font-black uppercase tracking-widest text-pl-green hover:underline text-left w-fit"
+          >
+            {toast.action.label}
+          </button>
+        )}
+      </div>
+      <button onClick={onClose} className="text-text-tertiary hover:text-white transition-colors shrink-0">
         <X size={18} />
       </button>
       

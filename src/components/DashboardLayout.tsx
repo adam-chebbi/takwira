@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
@@ -96,9 +96,10 @@ export default function DashboardLayout() {
               >
                 <Menu size={20} />
               </button>
-              <div className="text-xl font-display font-black italic tracking-tighter text-accent-green bg-black px-2 py-0.5 rounded-sm">
-                T<span className="text-white">.</span>
-              </div>
+              <Link to="/" className="flex items-center group" aria-label="Takwira.com Home">
+                <span className="text-xl font-display font-black tracking-tighter text-pl-purple">T</span>
+                <span className="text-xl font-display font-black tracking-tighter text-pl-pink">.</span>
+              </Link>
            </div>
            <div className="w-8 h-8 rounded-full bg-accent-green flex items-center justify-center text-black font-black text-xs">
               GS
@@ -129,18 +130,17 @@ function SidebarContent({ onLogout, onClose }: { onLogout: () => void; onClose?:
   return (
     <div className="flex flex-col h-full py-8">
       {/* Logo */}
-      <div className="px-8 mb-12">
-        <div className="text-2xl font-display font-black italic tracking-tighter text-accent-green bg-black px-3 py-1 rounded-sm skew-x-[-10deg] w-max mb-6">
-          TAKWIRA<span className="text-white">.COM</span>
-        </div>
+      <Link to="/" className="flex items-center group px-8 mb-8" aria-label="Takwira.com Home">
+        <span className="text-2xl font-display font-black tracking-tighter text-pl-purple">TAKWIRA</span>
+        <span className="text-2xl font-display font-black tracking-tighter text-pl-pink">.</span>
+      </Link>
         
-        <div className="space-y-1">
+        <div className="space-y-1 px-8">
            <h3 className="text-lg font-display font-black uppercase tracking-tight text-white">Gammarth Foot Center</h3>
            <Badge className="bg-accent-green/10 text-accent-green border-accent-green/20 uppercase font-black text-[9px] tracking-widest h-6">
              Gérant Vérifié ✓
            </Badge>
         </div>
-      </div>
 
       {/* Nav */}
       <nav className="flex-1 space-y-1">

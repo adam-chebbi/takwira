@@ -47,7 +47,7 @@ const Counter = ({ target, duration = 1.5 }: { target: number, duration?: number
 const MatchTicket: React.FC<{ match: any, type: 'upcoming' | 'history' }> = ({ match, type }) => {
   return (
     <div className={cn(
-      "group relative overflow-hidden bg-background-card border border-border-subtle rounded-2xl transition-all hover:border-accent-green/30",
+      "group relative overflow-hidden bg-background-card border border-border-subtle rounded-2xl transition-all hover:border-pl-green/30",
       type === 'history' && "opacity-70 grayscale-[0.3]"
     )}>
       <div className="absolute top-1/2 -left-3 w-6 h-6 rounded-full bg-background-primary z-10 border-r border-border-subtle" />
@@ -56,7 +56,7 @@ const MatchTicket: React.FC<{ match: any, type: 'upcoming' | 'history' }> = ({ m
       <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 relative">
          <div className="flex-1 space-y-4">
             <div className="flex items-center gap-3">
-               <Badge className={cn("font-black text-[10px] uppercase h-6 px-3", type === 'upcoming' ? 'bg-accent-green/10 text-accent-green' : 'bg-background-secondary text-text-tertiary')}>
+               <Badge className={cn("font-black text-[10px] uppercase h-6 px-3", type === 'upcoming' ? 'bg-pl-green/10 text-pl-green' : 'bg-background-secondary text-text-tertiary')}>
                  {type === 'upcoming' ? 'À venir' : 'Terminé'}
                </Badge>
                <span className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary">{match.id}</span>
@@ -65,7 +65,7 @@ const MatchTicket: React.FC<{ match: any, type: 'upcoming' | 'history' }> = ({ m
             <div className="space-y-1">
                <h3 className="text-xl md:text-2xl font-display font-black uppercase tracking-tight leading-none">{match.terrain}</h3>
                <div className="flex items-center gap-2 text-text-secondary text-xs">
-                  <MapPin size={14} className="text-accent-green" />
+                  <MapPin size={14} className="text-pl-green" />
                   {match.location}
                </div>
             </div>
@@ -76,7 +76,7 @@ const MatchTicket: React.FC<{ match: any, type: 'upcoming' | 'history' }> = ({ m
          <div className="flex items-center justify-between md:flex-col md:items-end md:justify-center md:min-w-[120px] gap-2">
             <div className="flex flex-col items-center md:items-end">
                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary">MER 22 MAI</span>
-               <span className="text-2xl font-display font-black leading-none text-accent-green">19:00</span>
+               <span className="text-2xl font-display font-black leading-none text-pl-green">19:00</span>
             </div>
             <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border border-border-subtle px-3 py-1 rounded-full">
                <Users size={12} strokeWidth={2.5} /> {match.players}
@@ -86,10 +86,10 @@ const MatchTicket: React.FC<{ match: any, type: 'upcoming' | 'history' }> = ({ m
       
       <div className="bg-background-secondary/50 px-8 py-3 border-t border-border-subtle flex items-center justify-between">
          {type === 'upcoming' ? (
-           <button className="text-[10px] font-black uppercase tracking-widest text-accent-green hover:underline">Voir le match →</button>
+           <button className="text-[10px] font-black uppercase tracking-widest text-pl-green hover:underline">Voir le match →</button>
          ) : (
            <button className="text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-white flex items-center gap-2 group/avis">
-              <Star size={14} className="group-hover/avis:text-accent-green transition-colors" /> Laisser un avis
+              <Star size={14} className="group-hover/avis:text-pl-green transition-colors" /> Laisser un avis
            </button>
          )}
          <button className="text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-danger">Partager</button>
@@ -130,7 +130,7 @@ export default function Profile() {
   if (!user || !userProfile) return null;
 
   return (
-    <div className="min-h-screen bg-background-primary pt-32 pb-32 text-white">
+    <div className="min-h-screen bg-background-primary pt-32 pb-32">
       <div className="max-w-4xl mx-auto px-4 md:px-8">
         
         {/* Profile Header */}
@@ -138,7 +138,7 @@ export default function Profile() {
            <div className="relative group">
               {/* Rotating Border */}
               <div className="absolute inset-[-6px] rounded-full overflow-hidden">
-                <div className="absolute inset-0 bg-[conic-gradient(from_0deg,#22C55E_0deg,#22C55E_120deg,transparent_121deg,transparent_360deg)] animate-[spin_4s_linear_infinite]" />
+                <div className="absolute inset-0 bg-[conic-gradient(from_0deg,#00FF85_0deg,#00FF85_120deg,transparent_121deg,transparent_360deg)] animate-[spin_4s_linear_infinite]" />
                 <div className="absolute inset-[2px] bg-background-primary rounded-full group-hover:scale-[1.02] transition-transform" />
               </div>
               
@@ -146,19 +146,24 @@ export default function Profile() {
                  {userProfile.avatarUrl ? (
                    <img src={userProfile.avatarUrl} className="w-full h-full rounded-full object-cover" alt={userProfile.name} />
                  ) : (
-                   <div className="w-full h-full rounded-full bg-accent-green flex items-center justify-center text-3xl md:text-5xl font-display font-black text-black uppercase select-none">
-                      {userProfile.name.charAt(0)}
+                   <div 
+                      className="w-full h-full rounded-full flex items-center justify-center text-3xl md:text-5xl font-display font-black text-white uppercase select-none"
+                      style={{ backgroundColor: userProfile.avatarColor || 'var(--color-pl-purple)' }}
+                   >
+                      {userProfile.firstName && userProfile.lastName 
+                         ? `${userProfile.firstName[0]}${userProfile.lastName[0]}`
+                         : userProfile.name.charAt(0)}
                    </div>
                  )}
               </div>
               
-              <button className="absolute bottom-2 right-2 z-20 w-8 h-8 rounded-full bg-background-card border border-border-subtle flex items-center justify-center text-text-tertiary hover:text-accent-green hover:scale-110 transition-all shadow-xl">
+              <button className="absolute bottom-2 right-2 z-20 w-8 h-8 rounded-full bg-background-card border border-border-subtle flex items-center justify-center text-text-muted hover:text-pl-green hover:scale-110 transition-all shadow-xl">
                  <Camera size={16} />
               </button>
            </div>
 
            <div className="space-y-1">
-              <h1 className="text-3xl md:text-4xl font-display font-black uppercase tracking-tight">{userProfile.name}</h1>
+              <h1 className="text-3xl md:text-4xl font-display font-black uppercase tracking-tight text-pl-purple">{userProfile.name}</h1>
               <div className="flex items-center justify-center gap-2 text-text-secondary text-sm font-medium">
                  <MapPin size={16} className="text-accent-green" /> {userProfile.city || 'Tunisie'}
                  <span className="w-1.5 h-1.5 rounded-full bg-border-subtle" />
@@ -170,18 +175,18 @@ export default function Profile() {
         {/* Stats Panel */}
         <div className="grid grid-cols-3 gap-3 md:gap-6 mb-16 px-2 md:px-0">
            {[
-             { label: "Matches Participés", count: reservations.length, icon: Trophy, color: "text-accent-green" },
-             { label: "Villes Visités", count: 1, icon: Users, color: "text-white" },
-             { label: "Terrains Favoris", count: 0, icon: MapPin, color: "text-text-tertiary" }
+             { label: "Matches Participés", count: reservations.length, icon: Trophy, color: "text-pl-green" },
+             { label: "Villes Visités", count: 1, icon: Users, color: "text-pl-purple" },
+             { label: "Terrains Favoris", count: 0, icon: MapPin, color: "text-text-muted" }
            ].map((stat, i) => (
              <Card key={i} className="p-4 md:p-6 text-center space-y-2 group overflow-hidden border-border-subtle relative">
-                <div className="absolute inset-0 bg-accent-green/[0.03] opacity-0 group-hover:opacity-100 transition-opacity" />
-                <stat.icon size={20} className="mx-auto text-text-tertiary group-hover:text-accent-green transition-colors" />
+                <div className="absolute inset-0 bg-pl-green/[0.03] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <stat.icon size={20} className="mx-auto text-text-muted group-hover:text-pl-green transition-colors" />
                 <div className="space-y-0.5 relative">
                    <p className={cn("text-2xl md:text-4xl font-display font-black leading-none", stat.color)}>
                      <Counter target={stat.count} />
                    </p>
-                   <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-text-tertiary">{stat.label}</p>
+                   <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-text-muted">{stat.label}</p>
                 </div>
              </Card>
            ))}
@@ -200,7 +205,7 @@ export default function Profile() {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={cn(
                     "flex-1 md:flex-none md:min-w-[140px] h-12 flex items-center justify-center gap-2 rounded-xl transition-all font-black uppercase text-[10px] tracking-widest",
-                    activeTab === tab.id ? "bg-accent-green text-black shadow-lg" : "text-text-tertiary hover:text-white"
+                    activeTab === tab.id ? "bg-pl-green text-black shadow-lg" : "text-text-muted hover:text-pl-purple"
                   )}
                 >
                   <tab.icon size={16} /> <span className="hidden md:inline">{tab.label}</span>
@@ -222,21 +227,21 @@ export default function Profile() {
                       onClick={() => setMatchTab('avenir')}
                       className={cn(
                         "pb-4 px-2 font-display font-bold uppercase text-lg tracking-tight relative",
-                        matchTab === 'avenir' ? "text-accent-green" : "text-text-tertiary hover:text-text-secondary"
+                        matchTab === 'avenir' ? "text-pl-green" : "text-text-muted hover:text-text-secondary"
                       )}
                     >
                       À venir
-                      {matchTab === 'avenir' && <motion.div layoutId="underline" className="absolute bottom-0 left-0 right-0 h-1 bg-accent-green rounded-t-full" />}
+                      {matchTab === 'avenir' && <motion.div layoutId="underline" className="absolute bottom-0 left-0 right-0 h-1 bg-pl-green rounded-t-full" />}
                     </button>
                     <button 
                       onClick={() => setMatchTab('histo')}
                       className={cn(
                         "pb-4 px-2 font-display font-bold uppercase text-lg tracking-tight relative",
-                        matchTab === 'histo' ? "text-accent-green" : "text-text-tertiary hover:text-text-secondary"
+                        matchTab === 'histo' ? "text-pl-green" : "text-text-muted hover:text-text-secondary"
                       )}
                     >
                       Historique
-                      {matchTab === 'histo' && <motion.div layoutId="underline" className="absolute bottom-0 left-0 right-0 h-1 bg-accent-green rounded-t-full" />}
+                      {matchTab === 'histo' && <motion.div layoutId="underline" className="absolute bottom-0 left-0 right-0 h-1 bg-pl-green rounded-t-full" />}
                     </button>
                  </div>
 
@@ -248,7 +253,7 @@ export default function Profile() {
                     ) : (matchTab === 'avenir' ? upcomingMatches : pastMatches).length === 0 ? (
                       <div className="py-20 text-center space-y-4">
                         <Trophy size={48} className="mx-auto text-text-tertiary" />
-                        <h3 className="text-xl font-display font-black uppercase text-white">Aucun match trouvé</h3>
+                        <h3 className="text-xl font-display font-black uppercase text-pl-purple">Aucun match trouvé</h3>
                       </div>
                     ) : (matchTab === 'avenir' ? upcomingMatches : pastMatches).map(res => (
                       <MatchTicket key={res.id} type={matchTab === 'avenir' ? 'upcoming' : 'history'} match={{ id: res.id, terrain: res.organizerName, location: res.date, players: 'N/A' }} />
@@ -266,7 +271,7 @@ export default function Profile() {
                   className="py-20 text-center space-y-4"
                 >
                    <Heart size={48} className="mx-auto text-text-tertiary" />
-                   <h3 className="text-xl font-display font-black uppercase text-white">Aucun favori</h3>
+                   <h3 className="text-xl font-display font-black uppercase text-pl-purple">Aucun favori</h3>
                    <p className="text-text-tertiary">Ajoutez des terrains à vos favoris pour les retrouver ici.</p>
                 </motion.div>
              )}
@@ -302,21 +307,21 @@ export default function Profile() {
                    </Card>
 
                    <div className="pt-12 space-y-6">
-                      <h3 className="text-xl font-display font-black uppercase tracking-tight text-white flex items-center gap-3">
+                      <h3 className="text-xl font-display font-black uppercase tracking-tight text-pl-purple flex items-center gap-3">
                          <Globe size={20} className="text-accent-green" /> Gestion des Cookies
                       </h3>
                       
                       <Card className="divide-y divide-border-subtle bg-background-card overflow-hidden">
                          <div className="px-6 py-4 flex items-center justify-between">
                             <div className="space-y-0.5">
-                               <p className="text-xs font-bold text-white">Cookies Essentiels</p>
+                               <p className="text-xs font-bold text-pl-purple">Cookies Essentiels</p>
                                <p className="text-[10px] text-text-tertiary">Session, Sécurité, Authentification</p>
                             </div>
                             <Badge className="bg-background-secondary text-text-tertiary border-none uppercase font-black text-[8px] tracking-widest h-5">Toujours actif</Badge>
                          </div>
                          <div className="px-6 py-4 flex items-center justify-between">
                             <div className="space-y-0.5">
-                               <p className="text-xs font-bold text-white">Cookies Analytiques</p>
+                               <p className="text-xs font-bold text-pl-purple">Cookies Analytiques</p>
                                <p className="text-[10px] text-text-tertiary">Fréquentation, vues d'articles</p>
                             </div>
                             <Badge className={cn(
@@ -328,7 +333,7 @@ export default function Profile() {
                          </div>
                          <div className="px-6 py-4 flex items-center justify-between">
                             <div className="space-y-0.5">
-                               <p className="text-xs font-bold text-white">Cookies Publicitaires</p>
+                               <p className="text-xs font-bold text-pl-purple">Cookies Publicitaires</p>
                                <p className="text-[10px] text-text-tertiary">Performance des annonces, clics</p>
                             </div>
                             <Badge className={cn(
@@ -386,15 +391,15 @@ function SettingRow({ icon: Icon, label, value, onEdit, isToggle }: any) {
   return (
     <div className="px-6 py-5 flex items-center justify-between group">
        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-background-secondary flex items-center justify-center text-text-tertiary group-hover:text-accent-green transition-colors">
+          <div className="w-10 h-10 rounded-xl bg-background-secondary flex items-center justify-center text-text-muted group-hover:text-pl-green transition-colors">
              <Icon size={20} />
           </div>
           <div className="space-y-0.5">
              <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">{label}</p>
-             <p className="text-sm font-bold text-text-secondary group-hover:text-white transition-colors">{value}</p>
+             <p className="text-sm font-bold text-text-secondary group-hover:text-pl-purple transition-colors">{value}</p>
           </div>
        </div>
-       <button onClick={onEdit} className="text-accent-green hover:underline font-black text-[10px] uppercase tracking-widest">
+       <button onClick={onEdit} className="text-pl-green hover:underline font-black text-[10px] uppercase tracking-widest">
           {isToggle ? 'Changer' : 'Modifier'}
        </button>
     </div>

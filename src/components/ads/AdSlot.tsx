@@ -162,15 +162,15 @@ export function AdSlot({ position, className }: AdSlotProps) {
     return (
       <div 
         className={cn(
-          "relative flex flex-col items-center justify-center p-6 text-center rounded-2xl border border-border-subtle bg-background-card",
+          "relative flex flex-col items-center justify-center p-6 text-center rounded-2xl border border-border-subtle bg-white shadow-pl",
           className
         )}
         style={{ minHeight: MIN_HEIGHTS[position] }}
       >
-        <div className="absolute top-2 left-2 z-10 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest text-text-secondary pointer-events-none border border-white/5">
+        <div className="absolute top-2 left-2 z-10 bg-pl-purple/90 backdrop-blur-md px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest text-white pointer-events-none border border-white/10">
           Publicité
         </div>
-        <p className="text-xs text-text-secondary max-w-[200px]">
+        <p className="text-[10px] uppercase tracking-widest font-bold text-text-muted max-w-[200px]">
           Activez les cookies publicitaires pour voir les annonces
         </p>
       </div>
@@ -186,13 +186,13 @@ export function AdSlot({ position, className }: AdSlotProps) {
       <div 
         key={refreshKey}
         className={cn(
-          "relative overflow-hidden rounded-2xl border border-border-subtle bg-background-card p-4 max-w-full", 
+          "relative overflow-hidden rounded-2xl border border-border-subtle bg-white p-4 max-w-full shadow-pl", 
           !adLoaded && "skeleton-shimmer",
           className
         )}
         style={{ minHeight: MIN_HEIGHTS[position] }}
       >
-        <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary">
+        <div className="mb-2 text-[8px] font-bold uppercase tracking-widest text-pl-purple/60">
           Publicité (AdSense)
         </div>
         <ins 
@@ -212,7 +212,7 @@ export function AdSlot({ position, className }: AdSlotProps) {
             <motion.div 
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-background-card z-10"
+              className="absolute inset-0 bg-white z-10"
             />
           )}
         </AnimatePresence>
@@ -223,7 +223,7 @@ export function AdSlot({ position, className }: AdSlotProps) {
   if (loading || !ad) {
     return (
       <div 
-        className={cn("rounded-2xl border border-border-subtle bg-background-card animate-pulse", className)}
+        className={cn("rounded-2xl border border-border-subtle bg-white/50 animate-pulse shadow-pl", className)}
         style={{ minHeight: MIN_HEIGHTS[position] }}
       />
     );
@@ -235,10 +235,10 @@ export function AdSlot({ position, className }: AdSlotProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className={cn("relative group overflow-hidden rounded-2xl border border-border-subtle bg-background-card max-w-full", className)}
+        className={cn("relative group overflow-hidden rounded-2xl border border-border-subtle bg-white max-w-full shadow-pl", className)}
         style={{ minHeight: MIN_HEIGHTS[position] }}
       >
-        <div className="absolute top-2 left-2 z-10 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest text-text-secondary pointer-events-none border border-white/5">
+        <div className="absolute top-2 left-2 z-10 bg-pl-purple/90 backdrop-blur-md px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest text-white pointer-events-none border border-white/10">
           Publicité
         </div>
         <a
@@ -253,9 +253,9 @@ export function AdSlot({ position, className }: AdSlotProps) {
             alt={ad.altText || ad.name}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-             <span className="text-white text-xs font-bold flex items-center gap-2">
-               {ad.title} <ExternalLink size={12} />
+          <div className="absolute inset-0 bg-gradient-to-t from-pl-purple/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+             <span className="text-white text-xs font-bold flex items-center gap-2 uppercase tracking-wide">
+                En savoir plus <ExternalLink size={12} />
              </span>
           </div>
         </a>

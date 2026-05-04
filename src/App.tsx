@@ -2,14 +2,17 @@ import * as React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { AnimatePresence, motion } from 'motion/react';
+import { useRegisterSW } from 'virtual:pwa-register/react';
+import { Shield } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
 import { ProtectedRoute, ManagerRoute, AdminRoute } from '@/src/components/auth/ProtectedRoute';
 import Navbar from '@/src/components/layout/Navbar';
 import BottomNav from '@/src/components/layout/BottomNav';
 import { Footer } from '@/src/components/layout/Footer';
-import { ToastProvider } from '@/src/components/ui/Toast';
+import { ToastProvider, useToast } from '@/src/components/ui/Toast';
 import { PageLoader } from '@/src/components/ui/PageLoader';
 import { CookieBanner } from '@/src/components/ui/CookieBanner';
+import { PWAInstallBanner } from '@/src/components/ui/PWAInstallBanner';
 
 import { ErrorBoundary } from '@/src/components/ErrorBoundary';
 import NotFound from '@/src/pages/NotFound';
@@ -335,23 +338,71 @@ const AnimatedRoutes = () => {
   );
 };
 
+function AppContent() {
+  const { toast } = useToast();
+  const [isOffline, setIsOffline] = React.useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
+
+  // PWA Service Worker Registration
+  useRegisterSW({
+    onNeedRefresh() {
+      toast("Une nouvelle version de Takwira est disponible", "info", {
+        label: "Actualiser",
+        onClick: () => window.location.reload()
+      });
+    },
+  });
+
+  React.useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-background-primary text-text-primary selection:bg-pl-purple/30 selection:text-pl-purple overflow-x-hidden">
+      <AnimatePresence>
+        {isOffline && (
+          <motion.div
+            initial={{ y: -50 }}
+            animate={{ y: 0 }}
+            exit={{ y: -50 }}
+            className="fixed top-0 left-0 right-0 z-[100] bg-pl-purple text-white px-4 py-2 flex items-center justify-center gap-2 border-b border-white/10 shadow-lg"
+          >
+            <Shield size={14} />
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              Mode hors ligne — Données potentiellement expirées
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <Navbar />
+      <main>
+        <ErrorBoundary>
+          <AnimatedRoutes />
+        </ErrorBoundary>
+      </main>
+      <Footer />
+      <BottomNav />
+      <CookieBanner />
+      <PWAInstallBanner />
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <HelmetProvider>
       <AuthProvider>
         <ToastProvider>
           <Router>
-            <div className="min-h-screen bg-background-primary text-text-primary selection:bg-accent-green/30 selection:text-accent-green overflow-x-hidden">
-              <Navbar />
-              <main>
-                <ErrorBoundary>
-                  <AnimatedRoutes />
-                </ErrorBoundary>
-              </main>
-              <Footer />
-              <BottomNav />
-              <CookieBanner />
-            </div>
+            <AppContent />
           </Router>
         </ToastProvider>
       </AuthProvider>

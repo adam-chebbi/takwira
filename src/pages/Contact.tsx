@@ -25,7 +25,7 @@ export default function Contact() {
         {/* Left: Contact Info */}
         <div className="space-y-12">
           <div className="space-y-4">
-            <h1 className="text-5xl md:text-6xl font-display font-black uppercase tracking-tight leading-none text-white">
+            <h1 className="text-5xl md:text-6xl font-display font-black uppercase tracking-tight leading-none text-pl-purple">
               Contactez-nous
             </h1>
             <p className="text-text-secondary text-lg max-w-md font-medium">
@@ -40,7 +40,7 @@ export default function Contact() {
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Email</p>
-                <p className="text-lg font-bold text-white">contact@takwira.com</p>
+                <p className="text-lg font-bold text-pl-purple">contact@takwira.com</p>
               </div>
             </div>
 
@@ -50,7 +50,7 @@ export default function Contact() {
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Téléphone</p>
-                <p className="text-lg font-bold text-white">+216 71 000 000</p>
+                <p className="text-lg font-bold text-pl-purple">+216 71 000 000</p>
               </div>
             </div>
 
@@ -60,7 +60,7 @@ export default function Contact() {
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Bureau</p>
-                <p className="text-lg font-bold text-white">Les Berges du Lac, Tunis, Tunisie</p>
+                <p className="text-lg font-bold text-pl-purple">Les Berges du Lac, Tunis, Tunisie</p>
               </div>
             </div>
           </div>
@@ -88,7 +88,7 @@ export default function Contact() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-text-secondary ml-1">Sujet</label>
-                <select className="w-full bg-[#1E1E2E] border border-border-subtle rounded-xl h-12 px-4 focus:border-accent-green outline-none text-white appearance-none">
+                <select className="w-full bg-background-secondary border border-border-subtle rounded-xl h-12 px-4 focus:border-pl-purple outline-none text-text-primary appearance-none transition-all">
                   <option>Support technique</option>
                   <option>Partenariat complexe</option>
                   <option>Publicité</option>
@@ -99,7 +99,7 @@ export default function Contact() {
                  <label className="text-sm font-semibold text-text-secondary ml-1">Message</label>
                  <textarea 
                   required
-                  className="w-full bg-[#1E1E2E] border border-border-subtle rounded-xl p-4 min-h-[150px] focus:border-accent-green outline-none text-white resize-none"
+                  className="w-full bg-background-secondary border border-border-subtle rounded-xl p-4 min-h-[150px] focus:border-pl-purple outline-none text-text-primary resize-none transition-all"
                   placeholder="Comment pouvons-nous vous aider ?"
                 />
               </div>

@@ -24,7 +24,7 @@ export default function Academies() {
           <Badge className="bg-accent-green/10 text-accent-green border-none font-black text-[10px] uppercase tracking-[0.2em] px-6 h-8">
             Formation & Avenir
           </Badge>
-          <h1 className="text-5xl md:text-7xl font-display font-black uppercase tracking-tight leading-none text-white">
+          <h1 className="text-5xl md:text-7xl font-display font-black uppercase tracking-tight leading-none text-pl-purple">
             Trouve la meilleure <span className="text-accent-green">Académie</span>
           </h1>
           <p className="text-text-secondary text-lg font-medium leading-relaxed max-w-xl">
@@ -38,7 +38,7 @@ export default function Academies() {
                   placeholder="Zone géographique..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-background-secondary border border-border-subtle rounded-2xl h-16 pl-14 pr-6 focus:border-accent-green outline-none text-white"
+                  className="w-full bg-background-secondary border border-border-subtle rounded-2xl h-16 pl-14 pr-6 focus:border-accent-green outline-none text-text-primary"
                 />
              </div>
              <Button className="h-16 px-10 uppercase font-black tracking-widest text-sm">Chercher</Button>
@@ -68,7 +68,7 @@ export default function Academies() {
         ) : filteredAcademies.length === 0 ? (
           <div className="col-span-full py-20 text-center space-y-4">
             <Users size={48} className="mx-auto text-text-tertiary" />
-            <h3 className="text-xl font-display font-black uppercase text-white">Aucune académie trouvée</h3>
+            <h3 className="text-xl font-display font-black uppercase text-pl-purple">Aucune académie trouvée</h3>
             <p className="text-text-tertiary">Essayez une autre recherche ou revenez plus tard.</p>
           </div>
         ) : filteredAcademies.map((academy, i) => (
@@ -91,10 +91,10 @@ export default function Academies() {
                <div className="p-8 flex-1 flex flex-col gap-6">
                   <div className="space-y-2">
                      <div className="flex items-center justify-between">
-                        <h3 className="text-2xl font-display font-black uppercase tracking-tight text-white">{academy.name}</h3>
+                        <h3 className="text-2xl font-display font-black uppercase tracking-tight text-pl-purple">{academy.name}</h3>
                         <div className="flex items-center gap-1">
                            <Star size={14} fill="#22C55E" className="text-accent-green" />
-                           <span className="text-sm font-black text-white">4.8</span>
+                           <span className="text-sm font-black text-pl-purple">4.8</span>
                         </div>
                      </div>
                      <p className="flex items-center gap-2 text-text-tertiary text-[10px] font-black uppercase tracking-widest">
@@ -111,7 +111,7 @@ export default function Academies() {
                   <div className="pt-6 border-t border-border-subtle mt-auto space-y-4">
                      <div className="flex justify-between items-end">
                         <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Disponibilité</p>
-                        <p className="text-sm font-black text-white leading-none">Inscriptions Ouvertes</p>
+                        <p className="text-sm font-black text-pl-purple leading-none">Inscriptions Ouvertes</p>
                      </div>
                      <Button variant="outline" className="w-full h-12 border-border-subtle uppercase font-black text-[10px] tracking-widest gap-2 hover:bg-accent-green hover:text-black hover:border-accent-green transition-all">
                         Détails & Inscription <ArrowRight size={16} />

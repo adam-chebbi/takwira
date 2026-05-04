@@ -184,7 +184,7 @@ export default function ReservationFlow() {
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-20 bg-background-primary overflow-x-hidden">
+    <div className="flex-grow pt-24 pb-20 bg-background-primary overflow-x-hidden">
       <div className="max-w-3xl mx-auto px-4 md:px-8">
         
         {/* Header */}
@@ -564,7 +564,7 @@ const SuccessState = ({ terrainName, matchName }: { terrainName: string, matchNa
   }, []);
 
   return (
-    <div className="min-h-screen pt-24 pb-20 bg-background-primary flex items-center justify-center px-4 overflow-hidden relative">
+    <div className="flex-grow pt-24 pb-20 bg-background-primary flex items-center justify-center px-4 overflow-hidden relative">
       {/* Confetti Animation */}
       <AnimatePresence>
         {showConfetti && (

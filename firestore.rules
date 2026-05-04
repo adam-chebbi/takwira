@@ -28,7 +28,11 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+        request.auth.token.email == 'adam.chebbi.55@gmail.com'
+      );
     }
 
     function isOwner(userId) {
@@ -164,6 +168,35 @@ service cloud.firestore {
       allow create: if isSignedIn(); // Allow creation by other users (e.g. when joining match)
       allow update: if isOwner(existing().userId) && incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
       allow delete: if isOwner(existing().userId);
+    }
+
+    // --- Platform Settings ---
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Blog Posts ---
+    match /blogPosts/{postId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Ad Slots ---
+    match /adSlots/{adId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Recurrences ---
+    match /recurrences/{recId} {
+      allow read: if isSignedIn() && (isOwner(existing().managerId) || isAdmin());
+      allow write: if isSignedIn() && (isOwner(incoming().managerId) || isAdmin());
+    }
+
+    // --- Connection Test ---
+    match /test/{id} {
+      allow read: if true;
     }
   }
 }

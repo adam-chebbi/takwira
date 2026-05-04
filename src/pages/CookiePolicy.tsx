@@ -10,7 +10,7 @@ export default function CookiePolicy() {
   const { consent, saveCustom } = useCookie();
 
   return (
-    <div className="min-h-screen bg-background-primary pt-32 pb-32">
+    <div className="flex-grow bg-background-primary pt-32 pb-32">
       <div className="max-w-4xl mx-auto px-4 md:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

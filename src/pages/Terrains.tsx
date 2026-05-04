@@ -73,10 +73,10 @@ export default function Terrains() {
   });
 
   return (
-    <div className="flex flex-col h-screen md:pt-20 bg-background-primary overflow-hidden">
+    <div className="flex flex-col md:pt-20 bg-background-primary">
       <SEO title="Trouve ton terrain | Takwira.com" />
       {/* Top Search & Filter Bar */}
-      <div className="sticky top-0 z-30 bg-white border-b border-border-subtle p-4 pb-2 md:px-8">
+      <div className="sticky top-0 md:top-20 z-30 bg-white border-b border-border-subtle p-4 pb-2 md:px-8">
         <div className="max-w-7xl mx-auto flex flex-col gap-4">
           <div className="relative group flex items-center">
             <Search className="absolute left-4 text-text-secondary group-focus-within:text-pl-purple transition-colors" size={20} />
@@ -109,10 +109,10 @@ export default function Terrains() {
           </div>
         </div>
       </div>
-      <div className="flex flex-1 relative overflow-hidden">
+      <div className="flex flex-1 relative">
         {/* Main Panel: Search Results */}
-        <div className="w-full flex flex-col bg-background-primary overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 no-scrollbar">
+        <div className="w-full flex flex-col bg-background-primary">
+          <div className="px-4 md:px-8 py-6">
             <div className="flex justify-between items-center mb-6 max-w-7xl mx-auto w-full">
               <h2 className="text-2xl font-display uppercase font-bold tracking-tight">
                 <span className="text-pl-purple">{filteredTerrains.length}</span> terrains trouvés

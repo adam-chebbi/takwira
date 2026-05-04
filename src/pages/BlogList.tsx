@@ -17,7 +17,7 @@ export default function BlogList() {
   });
 
   return (
-    <div className="min-h-screen bg-background-primary pt-32 pb-24">
+    <div className="flex-grow bg-background-primary pt-32 pb-24">
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         {/* Header Section */}
         <div className="text-center mb-16 space-y-6">

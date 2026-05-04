@@ -65,6 +65,7 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
+      className="flex-grow flex flex-col"
     >
       {children}
     </motion.div>
@@ -340,6 +341,7 @@ const AnimatedRoutes = () => {
 
 function AppContent() {
   const { toast } = useToast();
+  const location = useLocation();
   const [isOffline, setIsOffline] = React.useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
 
   // PWA Service Worker Registration
@@ -365,8 +367,10 @@ function AppContent() {
     };
   }, []);
 
+  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/admin');
+
   return (
-    <div className="min-h-screen bg-background-primary text-text-primary selection:bg-pl-purple/30 selection:text-pl-purple overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-background-primary text-text-primary selection:bg-pl-purple/30 selection:text-pl-purple overflow-x-hidden">
       <AnimatePresence>
         {isOffline && (
           <motion.div
@@ -382,14 +386,14 @@ function AppContent() {
           </motion.div>
         )}
       </AnimatePresence>
-      <Navbar />
-      <main>
+      {!isDashboard && <Navbar />}
+      <main className="flex-grow flex flex-col">
         <ErrorBoundary>
           <AnimatedRoutes />
         </ErrorBoundary>
       </main>
-      <Footer />
-      <BottomNav />
+      {!isDashboard && <Footer />}
+      {!isDashboard && <BottomNav />}
       <CookieBanner />
       <PWAInstallBanner />
     </div>

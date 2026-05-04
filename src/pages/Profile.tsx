@@ -130,7 +130,7 @@ export default function Profile() {
   if (!user || !userProfile) return null;
 
   return (
-    <div className="min-h-screen bg-background-primary pt-32 pb-32">
+    <div className="flex-grow bg-background-primary pt-32 pb-32">
       <div className="max-w-4xl mx-auto px-4 md:px-8">
         
         {/* Profile Header */}

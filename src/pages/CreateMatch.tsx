@@ -111,7 +111,7 @@ export default function CreateMatch() {
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-20 px-4 md:px-6">
+    <div className="flex-grow pt-24 pb-20 px-4 md:px-6">
       <div className="max-w-xl mx-auto">
         <div className="mb-8 space-y-2">
           <h1 className="text-3xl font-display font-black uppercase tracking-tight text-pl-purple italic">Organiser un match</h1>

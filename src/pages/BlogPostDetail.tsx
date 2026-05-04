@@ -87,7 +87,7 @@ export default function BlogPostDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-background-primary pt-24 pb-32">
+    <div className="flex-grow bg-background-primary pt-24 pb-32">
       {/* Breadcrumbs & Navigation */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8">
         <Link to="/blog" className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-pl-purple transition-colors">

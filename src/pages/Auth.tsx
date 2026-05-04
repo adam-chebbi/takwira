@@ -200,7 +200,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-background-primary flex items-center justify-center relative overflow-hidden px-4 py-12">
+    <div className="flex-grow bg-background-primary flex items-center justify-center relative overflow-hidden px-4 py-12">
       <div id="recaptcha-container"></div>
       
       {/* Background Glow */}

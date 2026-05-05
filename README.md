@@ -88,6 +88,8 @@ Pour déployer Takwira sur Vercel, suivez ces étapes :
 | `VITE_FIREBASE_STORAGE_BUCKET` | URL du bucket de stockage | Console Firebase > Paramètres du projet |
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | Identifiant d'envoi de messages | Console Firebase > Paramètres du projet |
 | `VITE_FIREBASE_APP_ID` | Identifiant unique de l'application | Console Firebase > Paramètres du projet |
+| `VITE_FIREBASE_MEASUREMENT_ID` | ID de mesure (Analytics) | Console Firebase > Paramètres du projet |
+| `VITE_FIREBASE_DATABASE_ID` | ID de la base Firestore (souvent `(default)`) | Console Firebase > Firestore |
 | `VITE_ADSENSE_PUBLISHER_ID` | Votre identifiant Google AdSense | Dashboard Google AdSense (`ca-pub-XXX`) |
 | `VITE_ADSENSE_SLOT_BLOG_LIST` | ID de l'emplacement pub liste blog | Dashboard Google AdSense |
 | `VITE_ADSENSE_SLOT_SIDEBAR_TOP` | ID de l'emplacement pub barre latérale haut | Dashboard Google AdSense |

@@ -12,6 +12,7 @@
   --color-pl-purple: #3d195b;
   --color-pl-purple-dark: #38003c;
   --color-pl-green: #00ff85;
+  --color-accent-green: #00ff85;
   --color-pl-pink: #ff005a;
   --color-pl-cyan: #04f4ff;
   
@@ -82,6 +83,57 @@
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
+  }
+
+  .blog-content {
+    @apply text-text-primary leading-[1.75] font-sans text-[18px];
+  }
+
+  .blog-content h2, .blog-content h3, .blog-content h4 {
+    @apply font-display font-bold uppercase tracking-tight text-pl-purple mt-12 mb-6;
+  }
+
+  .blog-content h2 { @apply text-4xl; }
+  .blog-content h3 { @apply text-3xl; }
+  .blog-content h4 { @apply text-2xl; }
+
+  .blog-content p {
+    @apply mb-6;
+  }
+
+  .blog-content a {
+    @apply text-accent-green underline-offset-4 hover:underline font-bold transition-all;
+  }
+
+  .blog-content blockquote {
+    @apply pl-6 py-4 border-l-4 border-accent-green bg-background-card italic mb-8 rounded-r-xl shadow-sm text-lg text-text-secondary;
+  }
+
+  .blog-content img {
+    @apply w-full h-auto rounded-[20px] shadow-lg my-12;
+  }
+
+  .blog-content ul, .blog-content ol {
+    @apply mb-8 pl-6 space-y-3;
+  }
+
+  .blog-content ul { @apply list-disc; }
+  .blog-content ol { @apply list-decimal; }
+
+  .blog-content li {
+    @apply pl-2 font-medium;
+  }
+
+  .blog-content code {
+    @apply bg-background-secondary px-2 py-0.5 rounded text-sm font-mono text-pl-pink border border-border-subtle;
+  }
+
+  .blog-content pre {
+    @apply bg-pl-purple text-white p-8 rounded-[20px] overflow-x-auto font-mono text-sm mb-10 shadow-2xl;
+  }
+
+  .blog-content pre code {
+    @apply bg-transparent p-0 border-none text-white;
   }
 }
 

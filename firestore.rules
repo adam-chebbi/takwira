@@ -124,7 +124,7 @@ service cloud.firestore {
 
     function isValidMatch(data) {
       return data.title is string && data.date is string &&
-             data.status in ['upcoming', 'ongoing', 'completed', 'cancelled'] &&
+             data.status in ['open', 'full', 'completed', 'cancelled'] &&
              data.organizerId == request.auth.uid;
     }
 

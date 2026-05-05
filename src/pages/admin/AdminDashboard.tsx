@@ -11,10 +11,11 @@ import {
   updateDoc,
   serverTimestamp,
   getDocs,
-  Timestamp
+  Timestamp,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '@/src/lib/firebase';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
   MapPin, 
@@ -29,11 +30,19 @@ import {
   TrendingUp,
   Search,
   Check,
-  X
+  X,
+  UserPlus,
+  Calendar,
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import { Badge } from '@/src/components/ui/Badge';
 import { Button } from '@/src/components/ui/Button';
-import { formatDistanceToNow } from 'date-fns';
+import { Counter } from '@/src/components/ui/Counter';
+import { Modal } from '@/src/components/ui/Modal';
+import { Input } from '@/src/components/ui/Input';
+import { createNotification } from '@/src/lib/notifications';
+import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/src/lib/utils';
 
@@ -50,6 +59,12 @@ export default function AdminDashboard() {
   const [pendingComplexes, setPendingComplexes] = React.useState<any[]>([]);
   const [recentActivity, setRecentActivity] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  
+  // Rejection Modal State
+  const [isRejectModalOpen, setIsRejectModalOpen] = React.useState(false);
+  const [rejectingComplex, setRejectingComplex] = React.useState<any>(null);
+  const [rejectionReason, setRejectionReason] = React.useState('');
+  const [isRejecting, setIsRejecting] = React.useState(false);
 
   React.useEffect(() => {
     async function fetchKPIs() {
@@ -66,7 +81,7 @@ export default function AdminDashboard() {
       ] = await Promise.all([
         getCountFromServer(collection(db, 'users')),
         getCountFromServer(query(collection(db, 'complexes'), where('isVerified', '==', true))),
-        getCountFromServer(query(collection(db, 'reservations'), where('createdAt', '>=', Timestamp.fromDate(startOfMonth)))),
+        getCountFromServer(query(collection(db, 'reservations'), where('date', '>=', format(startOfMonth, 'yyyy-MM-dd')))), // Assuming date is yyyy-MM-dd
         getCountFromServer(query(collection(db, 'terrains'), where('status', '==', 'active'))),
         getCountFromServer(query(collection(db, 'blogPosts'), where('status', '==', 'published'))),
         getCountFromServer(query(collection(db, 'adSlots'), where('isActive', '==', true)))
@@ -90,32 +105,91 @@ export default function AdminDashboard() {
       setPendingComplexes(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
-    // Recent Activity (simulated by latest reservations and users)
-    const qActivity = query(collection(db, 'reservations'), orderBy('createdAt', 'desc'), limit(10));
-    const unsubActivity = onSnapshot(qActivity, (snap) => {
-      setRecentActivity(snap.docs.map(doc => ({ 
-        id: doc.id, 
-        type: 'reservation',
-        ...doc.data() 
-      })));
-      setLoading(false);
-    });
+    // Recent Activity (unified users and reservations)
+    const fetchActivity = async () => {
+      try {
+        const [resSnap, usersSnap] = await Promise.all([
+          getDocs(query(collection(db, 'reservations'), orderBy('createdAt', 'desc'), limit(15))),
+          getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(10)))
+        ]);
+
+        const activities = [
+          ...resSnap.docs.map(doc => ({
+            id: doc.id,
+            type: 'reservation',
+            createdAt: doc.data().createdAt,
+            data: doc.data()
+          })),
+          ...usersSnap.docs.map(doc => ({
+            id: doc.id,
+            type: 'user',
+            createdAt: doc.data().createdAt,
+            data: doc.data()
+          }))
+        ].sort((a, b) => {
+          const timeA = a.createdAt?.toMillis() || 0;
+          const timeB = b.createdAt?.toMillis() || 0;
+          return timeB - timeA;
+        }).slice(0, 15);
+
+        setRecentActivity(activities);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching activity:", err);
+      }
+    };
+
+    fetchActivity();
 
     return () => {
       unsubPending();
-      unsubActivity();
     };
   }, []);
 
-  const handleVerifyComplex = async (complexId: string, managerId: string) => {
+  const handleVerifyComplex = async (complex: any) => {
     try {
-      await updateDoc(doc(db, 'complexes', complexId), { isVerified: true });
-      // Send notification (pseudo-code/simulated)
-      const notifRef = collection(db, 'notifications');
-      // In a real app we'd trigger a cloud function or write here
-      console.log(`Verified complex ${complexId} for manager ${managerId}`);
+      await updateDoc(doc(db, 'complexes', complex.id), { 
+        isVerified: true,
+        updatedAt: serverTimestamp()
+      });
+      
+      await createNotification(
+        complex.managerId,
+        'system',
+        'Complexe vérifié !',
+        `Félicitations ! Votre complexe "${complex.name}" a été vérifié par l'administrateur. Vous pouvez maintenant recevoir des réservations.`,
+        complex.id
+      );
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleRejectComplex = async () => {
+    if (!rejectingComplex || !rejectionReason.trim()) return;
+    setIsRejecting(true);
+    try {
+      await updateDoc(doc(db, 'complexes', rejectingComplex.id), { 
+        isActive: false,
+        rejectionReason: rejectionReason.trim(),
+        updatedAt: serverTimestamp()
+      });
+      
+      await createNotification(
+        rejectingComplex.managerId,
+        'system',
+        'Demande de vérification refusée',
+        `Votre demande pour "${rejectingComplex.name}" a été refusée. Raison : ${rejectionReason}`,
+        rejectingComplex.id
+      );
+      
+      setIsRejectModalOpen(false);
+      setRejectingComplex(null);
+      setRejectionReason('');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsRejecting(false);
     }
   };
 
@@ -141,7 +215,9 @@ export default function AdminDashboard() {
             <div className={cn("w-10 h-10 rounded-xl bg-background-secondary flex items-center justify-center mb-4", stat.color)}>
               <stat.icon size={20} />
             </div>
-            <p className="text-3xl font-display font-black text-white">{stat.value}</p>
+            <p className="text-3xl font-display font-black text-white">
+              <Counter value={stat.value} />
+            </p>
             <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">{stat.label}</p>
           </motion.div>
         ))}
@@ -190,12 +266,20 @@ export default function AdminDashboard() {
                             <td className="px-6 py-4">
                                <div className="flex items-center gap-2">
                                   <button 
-                                    onClick={() => handleVerifyComplex(c.id, c.managerId)}
+                                    onClick={() => handleVerifyComplex(c)}
                                     className="w-8 h-8 rounded-lg bg-accent-green/10 text-accent-green flex items-center justify-center hover:bg-accent-green hover:text-black transition-all"
+                                    title="Vérifier"
                                   >
                                      <Check size={16} />
                                   </button>
-                                  <button className="w-8 h-8 rounded-lg bg-danger/10 text-danger flex items-center justify-center hover:bg-danger hover:text-white transition-all">
+                                  <button 
+                                    onClick={() => {
+                                      setRejectingComplex(c);
+                                      setIsRejectModalOpen(true);
+                                    }}
+                                    className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+                                    title="Rejeter"
+                                  >
                                      <X size={16} />
                                   </button>
                                </div>
@@ -226,12 +310,19 @@ export default function AdminDashboard() {
                    {i !== recentActivity.length - 1 && (
                      <div className="absolute left-[19px] top-10 bottom-0 w-[2px] bg-border-subtle" />
                    )}
-                   <div className="w-10 h-10 rounded-xl bg-background-secondary border border-border-subtle flex items-center justify-center shrink-0 relative z-10 text-blue-500">
-                      <CalendarCheck size={18} />
+                   <div className={cn(
+                     "w-10 h-10 rounded-xl bg-background-secondary border border-border-subtle flex items-center justify-center shrink-0 relative z-10",
+                     activity.type === 'reservation' ? "text-pl-purple" : "text-accent-green"
+                   )}>
+                      {activity.type === 'reservation' ? <CalendarCheck size={18} /> : <UserPlus size={18} />}
                    </div>
                    <div className="space-y-1 py-1">
-                      <p className="text-xs text-text-secondary">
-                         Nouvelle réservation pour <span className="font-bold text-white">{activity.terrainName || 'Terrain'}</span>
+                      <p className="text-[13px] text-text-secondary leading-tight">
+                         {activity.type === 'reservation' ? (
+                           <>Nouvelle réservation de <span className="font-bold text-white">{activity.data.organizerName}</span> pour <span className="font-bold text-white">{activity.data.terrainName}</span></>
+                         ) : (
+                           <>Nouvel utilisateur : <span className="font-bold text-white">{activity.data.name}</span> nous a rejoint !</>
+                         )}
                       </p>
                       <p className="text-[10px] text-text-tertiary flex items-center gap-1 italic">
                          <Clock size={10} /> {activity.createdAt ? formatDistanceToNow(activity.createdAt.toDate(), { addSuffix: true, locale: fr }) : 'Maintenant'}
@@ -240,14 +331,64 @@ export default function AdminDashboard() {
                 </div>
               ))}
 
-              {recentActivity.length === 0 && (
+              {recentActivity.length === 0 && !loading && (
                 <div className="py-12 text-center opacity-30">
                    <p className="text-[10px] font-black uppercase tracking-widest">Aucune activité enregistrée</p>
+                </div>
+              )}
+
+              {loading && (
+                <div className="py-12 flex justify-center">
+                  <Loader2 size={24} className="animate-spin text-accent-green" />
                 </div>
               )}
            </div>
         </div>
       </div>
+
+      {/* Rejection Modal */}
+      <Modal 
+        isOpen={isRejectModalOpen} 
+        onClose={() => setIsRejectModalOpen(false)}
+        title="Rejeter le complexe"
+      >
+        <div className="space-y-6">
+          <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+            <AlertTriangle className="text-red-500 shrink-0" size={20} />
+            <p className="text-xs text-red-200">
+              Vous allez rejeter la demande de verification pour <span className="font-bold">{rejectingComplex?.name}</span>. 
+              Veuillez indiquer une raison.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary ml-1">Raison du rejet</label>
+            <textarea 
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              className="w-full min-h-[120px] p-4 bg-background-secondary border border-border-subtle rounded-2xl text-sm text-text-primary focus:border-red-500 outline-none resize-none"
+              placeholder="Ex: Photos non conformes, Informations incomplètes..."
+            />
+          </div>
+
+          <div className="flex gap-4">
+            <Button 
+              variant="secondary" 
+              onClick={() => setIsRejectModalOpen(false)}
+              className="flex-1 h-12 rounded-xl text-[10px] font-black uppercase tracking-widest"
+            >
+              Annuler
+            </Button>
+            <Button 
+              disabled={!rejectionReason.trim() || isRejecting}
+              onClick={handleRejectComplex}
+              className="flex-1 h-12 rounded-xl bg-red-500 text-white text-[10px] font-black uppercase tracking-widest"
+            >
+              {isRejecting ? <Loader2 size={16} className="animate-spin" /> : "Rejeter l'accès"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

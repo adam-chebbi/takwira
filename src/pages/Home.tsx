@@ -199,7 +199,7 @@ export default function Home() {
                 viewport={{ once: true }}
                 className="min-w-[280px] md:min-w-[380px] snap-start"
               >
-                <Card className="p-0 overflow-hidden group cursor-pointer h-full border-border-subtle shadow-md">
+                <Card className="p-0 overflow-hidden group cursor-pointer h-full border-border-subtle shadow-md" onClick={() => navigate(`/terrains/${complex.id}`)}>
                   <div className="relative h-64 overflow-hidden">
                     <img
                       src={complex.photos[0]}
@@ -222,7 +222,7 @@ export default function Home() {
                         className="pointer-events-auto bg-pl-purple hover:bg-pl-purple-dark text-white"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate('/terrains');
+                          navigate(`/terrains/${complex.id}`);
                         }}
                       >
                         Voir & Réserver
@@ -278,7 +278,7 @@ export default function Home() {
           <Button 
             size="lg" 
             className="w-full md:w-auto min-w-[240px] bg-pl-purple hover:bg-pl-purple-dark text-white"
-            onClick={() => navigate('/auth')}
+            onClick={() => navigate('/connexion')}
           >
             Créer un compte Joueur
           </Button>

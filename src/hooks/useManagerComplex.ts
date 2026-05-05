@@ -1,43 +1,70 @@
-import * as React from 'react';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { collection, query, where, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '@/src/lib/firebase';
 import { Complex, Terrain } from '@/src/lib/schema';
 
-export const useManagerComplex = (managerId: string | undefined) => {
-  const [complex, setComplex] = React.useState<Complex | null>(null);
-  const [terrains, setTerrains] = React.useState<Terrain[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<Error | null>(null);
+export function useManagerComplex(managerId: string | undefined) {
+  const [complex, setComplex] = useState<Complex | null>(null);
+  const [terrains, setTerrains] = useState<Terrain[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  React.useEffect(() => {
-    if (!managerId) return;
+  useEffect(() => {
+    if (!managerId) {
+      setIsLoading(false);
+      return;
+    }
 
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const q = query(collection(db, 'complexes'), where('managerId', '==', managerId), limit(1));
-        const snapshot = await getDocs(q);
-        
+    setIsLoading(true);
+
+    const complexQuery = query(
+      collection(db, 'complexes'),
+      where('managerId', '==', managerId),
+      limit(1)
+    );
+
+    const unsubscribeComplex = onSnapshot(
+      complexQuery,
+      (snapshot) => {
         if (!snapshot.empty) {
-          const complexDoc = snapshot.docs[0];
-          const complexData = { id: complexDoc.id, ...complexDoc.data() } as Complex;
+          const complexData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Complex;
           setComplex(complexData);
-          
-          // Fetch its terrains
-          const qT = query(collection(db, 'terrains'), where('complexId', '==', complexData.id));
-          const snapshotT = await getDocs(qT);
-          setTerrains(snapshotT.docs.map(doc => ({ id: doc.id, ...doc.data() } as Terrain)));
+
+          const terrainsQuery = query(
+            collection(db, 'terrains'),
+            where('complexId', '==', complexData.id)
+          );
+
+          const unsubscribeTerrains = onSnapshot(
+            terrainsQuery,
+            (terrainSnapshot) => {
+              const terrainList = terrainSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Terrain));
+              setTerrains(terrainList);
+              setIsLoading(false);
+            },
+            (err) => {
+              console.error("Error fetching terrains:", err);
+              setError(err as Error);
+              setIsLoading(false);
+            }
+          );
+
+          return () => unsubscribeTerrains();
+        } else {
+          setComplex(null);
+          setTerrains([]);
+          setIsLoading(false);
         }
-      } catch (err) {
-        console.error("Error fetching manager complex:", err);
+      },
+      (err) => {
+        console.error("Error fetching complex:", err);
         setError(err as Error);
-      } finally {
         setIsLoading(false);
       }
-    };
+    );
 
-    fetchData();
+    return () => unsubscribeComplex();
   }, [managerId]);
 
   return { complex, terrains, isLoading, error };
-};
+}

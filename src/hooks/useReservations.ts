@@ -1,46 +1,68 @@
-import * as React from 'react';
-import { collection, query, where, orderBy, onSnapshot, QueryConstraint } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { collection, query, where, onSnapshot, QueryConstraint, orderBy } from 'firebase/firestore';
 import { db } from '@/src/lib/firebase';
 import { Reservation } from '@/src/lib/schema';
 
-interface ReservationFilters {
+interface ReservationOptions {
   terrainId?: string;
   managerId?: string;
   organizerId?: string;
   date?: string;
+  status?: Reservation['status'];
 }
 
-export const useReservations = (filters: ReservationFilters) => {
-  const [reservations, setReservations] = React.useState<Reservation[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<Error | null>(null);
+export function useReservations(options: ReservationOptions = {}) {
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    setIsLoading(true);
+
     const constraints: QueryConstraint[] = [];
-    
-    if (filters.terrainId) constraints.push(where('terrainId', '==', filters.terrainId));
-    if (filters.managerId) constraints.push(where('managerId', '==', filters.managerId));
-    if (filters.organizerId) constraints.push(where('organizerId', '==', filters.organizerId));
-    if (filters.date) constraints.push(where('date', '==', filters.date));
-    
-    constraints.push(orderBy('startTime', 'asc'));
+
+    if (options.terrainId) {
+      constraints.push(where('terrainId', '==', options.terrainId));
+    }
+    if (options.managerId) {
+      constraints.push(where('managerId', '==', options.managerId));
+    }
+    if (options.organizerId) {
+      constraints.push(where('organizerId', '==', options.organizerId));
+    }
+    if (options.date) {
+      constraints.push(where('date', '==', options.date));
+    }
+    if (options.status) {
+      constraints.push(where('status', '==', options.status));
+    }
+
+    constraints.push(orderBy('createdAt', 'desc'));
 
     const q = query(collection(db, 'reservations'), ...constraints);
-    
-    const unsubscribe = onSnapshot(q, 
+
+    const unsubscribe = onSnapshot(
+      q,
       (snapshot) => {
-        setReservations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Reservation)));
+        const reservationList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Reservation));
+        setReservations(reservationList);
         setIsLoading(false);
       },
       (err) => {
-        console.error("Error listening to reservations:", err);
+        console.error("Error fetching reservations:", err);
         setError(err as Error);
         setIsLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [filters.terrainId, filters.managerId, filters.organizerId, filters.date]);
+  }, [
+    options.terrainId,
+    options.managerId,
+    options.organizerId,
+    options.date,
+    options.status
+  ]);
 
   return { reservations, isLoading, error };
-};
+}

@@ -2,7 +2,7 @@ import { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'player' | 'manager' | 'admin';
 
-export interface User {
+export interface UserProfile {
   id: string;
   phone: string;
   name: string;
@@ -12,9 +12,16 @@ export interface User {
   city: string;
   avatarUrl?: string;
   avatarColor?: string;
+  jerseyColor?: 'red' | 'blue';
+  jerseyName?: string;
+  jerseyNumber?: number;
   createdAt: Timestamp;
   isActive: boolean;
+  notificationsEnabled?: boolean;
 }
+
+// Keep User alias for backward compatibility if needed, but the prompt says UserProfile interface
+export type User = UserProfile;
 
 export interface Complex {
   id: string;
@@ -22,6 +29,7 @@ export interface Complex {
   name: string;
   address: string;
   city: string;
+  neighborhood?: string;
   governorate: string;
   lat: number;
   lng: number;
@@ -31,6 +39,8 @@ export interface Complex {
   closingTime: string; // "HH:MM"
   isVerified: boolean;
   isActive: boolean;
+  rating?: number;
+  reviewsCount?: number;
   createdAt: Timestamp;
 }
 
@@ -40,11 +50,12 @@ export interface Terrain {
   complexName: string;
   managerId: string;
   name: string;
-  type: '6vs6' | '7vs7';
+  type: '6v6' | '7v7';
   maxPlayers: number;
   amenities: ('vestiaires' | 'eclairage' | 'parking' | 'buvette' | 'tribune')[];
   photos: string[];
   pricePerHour: number;
+  description?: string;
   isActive: boolean;
   createdAt: Timestamp;
 }
@@ -88,6 +99,7 @@ export interface Match {
   id: string;
   reservationId?: string;
   terrainId?: string;
+  complexId?: string;
   terrainName?: string;
   complexName?: string;
   organizerId: string;
@@ -96,13 +108,13 @@ export interface Match {
   date: string;
   startTime: string;
   endTime?: string;
-  format: '6vs6' | '7vs7';
+  format: '6v6' | '7v7';
   maxPlayers: number;
   linkToken: string;
   teamA: string[];
   teamB: string[];
   teamsPublished: boolean;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  status: 'open' | 'full' | 'completed' | 'cancelled' | 'upcoming' | 'confirmed';
   createdAt: Timestamp;
 }
 
@@ -181,10 +193,10 @@ export interface AcademyMember {
   phone: string;
   parentPhone?: string;
   birthDate?: string;
-  subscriptionType: 'monthly' | 'quarterly' | 'biannual' | 'annual';
+  subscriptionType: 'monthly' | 'quarterly' | 'annual' | 'once';
   subscriptionStart: string;
   subscriptionEnd: string;
-  status: 'active' | 'expiring_soon' | 'expired';
+  status: 'active' | 'expired' | 'pending';
   notes?: string;
   createdAt: Timestamp;
 }
@@ -195,7 +207,7 @@ export interface BlogPost {
   slug: string;
   excerpt: string;
   content: string;
-  category: 'Actualités' | 'Conseils' | 'Terrains' | 'Interviews' | 'Communauté';
+  category: 'news' | 'tips' | 'event' | 'community' | 'academy';
   tags: string[];
   coverImageUrl: string;
   authorId: string;
@@ -206,7 +218,7 @@ export interface BlogPost {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   viewCount: number;
-  readTime: string;
+  readTimeMinutes: number;
 }
 
 export interface AdSlot {
@@ -216,7 +228,7 @@ export interface AdSlot {
   imageUrl: string;
   linkUrl: string;
   altText: string;
-  position: 'blog_list_between' | 'blog_post_inline' | 'blog_sidebar_top' | 'blog_sidebar_bottom';
+  position: 'home_hero' | 'search_top' | 'terrain_side' | 'blog_middle';
   isActive: boolean;
   startDate: Timestamp;
   endDate: Timestamp | null;
@@ -228,7 +240,7 @@ export interface AdSlot {
 export interface AppNotification {
   id: string;
   userId: string;
-  type: 'reservation_confirmed' | 'reservation_cancelled' | 'match_full' | 'team_published' | 'new_player_joined' | 'academy_expiring' | 'general';
+  type: 'match_reminder' | 'match_join' | 'match_cancel' | 'reservation_confirm' | 'reservation_cancel' | 'payment_success' | 'system' | 'team_published' | 'new_player_joined' | 'new_reservation';
   title: string;
   body: string;
   relatedId?: string;

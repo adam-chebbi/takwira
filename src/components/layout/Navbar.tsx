@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, User, LogOut, ChevronRight, Plus, LayoutDashboard, ShieldCheck } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
@@ -10,11 +10,20 @@ import { NotificationPanel } from './NotificationPanel';
 
 export default function Navbar() {
   const { user, userProfile, role, signOut } = useAuth();
-  const { unreadCount } = useNotifications();
+  const { notifications, unreadCount } = useNotifications(userProfile?.id);
   const [scrolled, setScrolled] = React.useState(false);
   const [showDropdown, setShowDropdown] = React.useState(false);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleNotificationsClick = () => {
+    if (window.innerWidth < 1024) {
+      navigate('/notifications');
+    } else {
+      setShowNotifications(!showNotifications);
+    }
+  };
 
   const isLoggedIn = !!user;
 
@@ -34,8 +43,8 @@ export default function Navbar() {
   const mainLinks = [
     { label: 'Terrains', path: '/terrains' },
     { label: 'Matchs', path: '/matches' },
-    { label: 'Tournois', path: '/tournaments' },
-    { label: 'Académies', path: '/academies' },
+    { label: 'Comment ça marche', path: '/#comment-ca-marche' },
+    { label: 'Pour les Gérants', path: '/inscription-gerant' },
   ];
 
   return (
@@ -122,7 +131,7 @@ export default function Navbar() {
           ) : (
             <div className="flex items-center gap-6 relative">
                <button 
-                 onClick={() => setShowNotifications(!showNotifications)}
+                 onClick={handleNotificationsClick}
                  className={cn(
                    "relative p-2 rounded-xl text-text-secondary hover:text-pl-purple hover:bg-pl-purple/5 transition-all",
                    showNotifications && "text-pl-purple bg-pl-purple/5"
@@ -135,11 +144,14 @@ export default function Navbar() {
                     {unreadCount > 0 && (
                       <motion.span 
                         initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
+                        animate={{ 
+                          scale: [0, 1.2, 1],
+                          transition: { type: "spring", stiffness: 300, damping: 15 }
+                        }}
                         exit={{ scale: 0 }}
-                        className="absolute top-2 right-2 w-4 h-4 bg-pl-pink text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white"
+                        className="absolute top-1 right-1 w-4 h-4 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm"
                       >
-                        {unreadCount}
+                        {unreadCount > 9 ? '9+' : unreadCount}
                       </motion.span>
                     )}
                   </AnimatePresence>
@@ -193,7 +205,7 @@ export default function Navbar() {
                            <div className="p-1 space-y-1">
                              {[
                                { label: 'Mon Profil', icon: User, path: '/profil' },
-                               { label: 'Mes Matchs', icon: ChevronRight, path: '/profil?tab=matchs' },
+                               { label: 'Mes Matchs', icon: ChevronRight, path: '/mes-matchs' },
                                { label: 'Dashboard Gérant', icon: LayoutDashboard, path: '/dashboard', show: role === 'manager' || role === 'admin' },
                                { label: 'Administration', icon: ShieldCheck, path: '/admin', show: role === 'admin' },
                              ].filter(item => item.show !== false).map((item, i) => (

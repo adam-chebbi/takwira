@@ -1,12 +1,12 @@
 .rich-text-editor-container .ql-toolbar.ql-snow {
-  background-color: var(--background-secondary);
+  background-color: var(--background-card);
   border: 1px solid var(--border-subtle);
   border-top-left-radius: 1rem;
   border-top-right-radius: 1rem;
 }
 
 .rich-text-editor-container .ql-container.ql-snow {
-  background-color: var(--background-card);
+  background-color: var(--background-secondary);
   border: 1px solid var(--border-subtle);
   border-top: none;
   border-bottom-left-radius: 1rem;

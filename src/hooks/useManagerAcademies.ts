@@ -1,41 +1,43 @@
-import * as React from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/src/lib/firebase';
 import { Academy } from '@/src/lib/schema';
 
-export const useManagerAcademies = (managerId: string | undefined) => {
-  const [academies, setAcademies] = React.useState<(Academy & { memberCount: number })[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+export function useManagerAcademies(managerId: string | undefined) {
+  const [academies, setAcademies] = useState<Academy[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  React.useEffect(() => {
-    if (!managerId) return;
+  useEffect(() => {
+    if (!managerId) {
+      setIsLoading(false);
+      return;
+    }
 
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const q = query(collection(db, 'academies'), where('managerId', '==', managerId));
-        const snapshot = await getDocs(q);
-        
-        const academiesData = await Promise.all(snapshot.docs.map(async (doc) => {
-          const academy = { id: doc.id, ...doc.data() } as Academy;
-          
-          // Get member count (simplified, could also be a field in the doc)
-          const membersQ = query(collection(db, 'academyMembers'), where('academyId', '==', doc.id));
-          const membersSnap = await getDocs(membersQ);
-          
-          return { ...academy, memberCount: membersSnap.size };
-        }));
+    setIsLoading(true);
 
-        setAcademies(academiesData);
-      } catch (err) {
+    const q = query(
+      collection(db, 'academies'),
+      where('managerId', '==', managerId),
+      where('isActive', '==', true)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const academyList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Academy));
+        setAcademies(academyList);
+        setIsLoading(false);
+      },
+      (err) => {
         console.error("Error fetching academies:", err);
-      } finally {
+        setError(err as Error);
         setIsLoading(false);
       }
-    };
+    );
 
-    fetchData();
+    return () => unsubscribe();
   }, [managerId]);
 
-  return { academies, isLoading };
-};
+  return { academies, isLoading, error };
+}

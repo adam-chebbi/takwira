@@ -1,6 +1,6 @@
 
 export function initGoogleAds() {
-  const googleAdsId = process.env.VITE_GOOGLE_ADS_ID;
+  const googleAdsId = import.meta.env.VITE_GOOGLE_ADS_ID;
   if (!googleAdsId || googleAdsId === 'AW-XXXXXXXXXX') {
     return;
   }
@@ -51,7 +51,7 @@ function hasAdvertisingConsent(): boolean {
 
 export function trackReservationSubmitted() {
   if (!hasAdvertisingConsent()) return;
-  const googleAdsId = process.env.VITE_GOOGLE_ADS_ID;
+  const googleAdsId = import.meta.env.VITE_GOOGLE_ADS_ID;
   if (window.gtag) {
     window.gtag('event', 'conversion', {
       'send_to': `${googleAdsId}/reservation_submitted`
@@ -61,7 +61,7 @@ export function trackReservationSubmitted() {
 
 export function trackMatchCreated() {
   if (!hasAdvertisingConsent()) return;
-  const googleAdsId = process.env.VITE_GOOGLE_ADS_ID;
+  const googleAdsId = import.meta.env.VITE_GOOGLE_ADS_ID;
   if (window.gtag) {
     window.gtag('event', 'conversion', {
       'send_to': `${googleAdsId}/match_created`
@@ -71,7 +71,7 @@ export function trackMatchCreated() {
 
 export function trackManagerSignup() {
   if (!hasAdvertisingConsent()) return;
-  const googleAdsId = process.env.VITE_GOOGLE_ADS_ID;
+  const googleAdsId = import.meta.env.VITE_GOOGLE_ADS_ID;
   if (window.gtag) {
     window.gtag('event', 'conversion', {
       'send_to': `${googleAdsId}/manager_signup`
@@ -81,7 +81,7 @@ export function trackManagerSignup() {
 
 export function trackCheckin() {
   if (!hasAdvertisingConsent()) return;
-  const googleAdsId = process.env.VITE_GOOGLE_ADS_ID;
+  const googleAdsId = import.meta.env.VITE_GOOGLE_ADS_ID;
   if (window.gtag) {
     window.gtag('event', 'conversion', {
       'send_to': `${googleAdsId}/player_checkin`

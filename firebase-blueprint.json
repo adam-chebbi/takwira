@@ -97,7 +97,7 @@
         "title": { "type": "string" },
         "date": { "type": "string" },
         "startTime": { "type": "string" },
-        "status": { "type": "string", "enum": ["upcoming", "ongoing", "completed", "cancelled"] },
+        "status": { "type": "string", "enum": ["open", "full", "completed", "cancelled"] },
         "linkToken": { "type": "string" },
         "teamsPublished": { "type": "boolean" }
       }

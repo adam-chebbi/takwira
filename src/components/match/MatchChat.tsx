@@ -32,6 +32,7 @@ interface MatchChatProps {
   currentUser: any | null; // From AuthContext
   userProfile: any | null;
   isOrganizer?: boolean;
+  currentPlayerName?: string;
 }
 
 const getAvatarColor = (name: string) => {
@@ -58,19 +59,45 @@ const formatMessageDate = (date: Date) => {
   return format(date, 'd MMMM, HH:mm', { locale: fr });
 };
 
-export default function MatchChat({ matchId, currentUser, userProfile, isOrganizer }: MatchChatProps) {
+export default function MatchChat({ matchId, currentUser, userProfile, isOrganizer, currentPlayerName }: MatchChatProps) {
   const [messages, setMessages] = React.useState<MatchMessage[]>([]);
   const [inputText, setInputText] = React.useState('');
   const [isOpen, setIsOpen] = React.useState(false);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [lastSeenTimestamp, setLastSeenTimestamp] = React.useState<number>(Date.now());
   const [userName, setUserName] = React.useState<string>(() => {
-    return localStorage.getItem(`takwira_chat_name_${matchId}`) || '';
+    return currentPlayerName || localStorage.getItem(`takwira_chat_name_${matchId}`) || '';
   });
-  const [isSettingName, setIsSettingName] = React.useState(!currentUser && !userName);
+
+  React.useEffect(() => {
+    if (currentPlayerName) {
+      setUserName(currentPlayerName);
+    }
+  }, [currentPlayerName]);
+
+  const [isSettingName, setIsSettingName] = React.useState(!currentUser && !userName && !currentPlayerName);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = React.useState(true);
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      const isBottom = scrollHeight - scrollTop - clientHeight < 50;
+      setIsAtBottom(isBottom);
+    }
+  };
+
+  const getSessionId = () => {
+    let sessionId = sessionStorage.getItem(`takwira_chat_session_${matchId}`);
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      sessionStorage.setItem(`takwira_chat_session_${matchId}`, sessionId);
+    }
+    return sessionId;
+  };
 
   // Load messages
   React.useEffect(() => {
@@ -104,13 +131,8 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
 
   // Scroll to bottom
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    if (scrollRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-      const isAtBottom = scrollHeight - scrollTop <= clientHeight + 150;
-      
-      if (isAtBottom || behavior === 'auto') {
-        messagesEndRef.current?.scrollIntoView({ behavior });
-      }
+    if (scrollRef.current && (isAtBottom || behavior === 'auto')) {
+      messagesEndRef.current?.scrollIntoView({ behavior });
     }
   };
 
@@ -134,7 +156,7 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
     const finalSenderName = userProfile?.name || userName || 'Anonyme';
     const msgData = {
       matchId,
-      senderId: currentUser?.uid || 'anonymous',
+      senderId: currentUser?.uid || getSessionId(),
       senderName: finalSenderName,
       senderAvatarColor: getAvatarColor(finalSenderName),
       text,
@@ -152,12 +174,11 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
 
   const handleDeleteMessage = async (msgId: string) => {
     if (!isOrganizer) return;
-    if (window.confirm("Supprimer ce message ?")) {
-      try {
-        await updateDoc(doc(db, 'matchMessages', msgId), { isDeleted: true });
-      } catch (error) {
-        console.error("Error deleting message:", error);
-      }
+    try {
+      await updateDoc(doc(db, 'matchMessages', msgId), { isDeleted: true });
+      setDeleteConfirmId(null);
+    } catch (error) {
+      console.error("Error deleting message:", error);
     }
   };
 
@@ -172,9 +193,10 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
   };
 
   const renderMessage = (msg: MatchMessage, index: number) => {
-    const isMe = msg.senderId === currentUser?.uid || (msg.senderId === 'anonymous' && msg.senderName === userName);
+    const sessionId = sessionStorage.getItem(`takwira_chat_session_${matchId}`);
+    const isMe = msg.senderId === currentUser?.uid || (msg.senderId === sessionId && msg.senderId !== null);
     const prevMsg = messages[index - 1];
-    const showName = !prevMsg || prevMsg.senderId !== msg.senderId || prevMsg.senderName !== msg.senderName;
+    const showName = !msg.isDeleted && (!prevMsg || prevMsg.senderId !== msg.senderId || prevMsg.senderName !== msg.senderName);
     
     // Time separator
     let showTimeSeparator = false;
@@ -214,7 +236,7 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
             "flex items-end gap-2 max-w-[85%]",
             isMe ? "flex-row-reverse" : "flex-row"
           )}>
-            {!isMe && (
+            {!isMe && !msg.isDeleted && (
               <div className={cn(
                 "w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0 shadow-sm",
                 msg.senderAvatarColor
@@ -222,8 +244,10 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
                 {msg.senderName.charAt(0)}
               </div>
             )}
+            
+            {!isMe && msg.isDeleted && <div className="w-8 shrink-0" />}
 
-            <div className="relative group/bubble">
+            <div className="relative group/bubble flex items-center gap-2">
               <div className={cn(
                 "px-4 py-3 rounded-2xl text-sm font-medium break-words",
                 isMe 
@@ -245,12 +269,31 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
               </div>
 
               {isOrganizer && !isMe && !msg.isDeleted && (
-                <button 
-                  onClick={() => handleDeleteMessage(msg.id)}
-                  className="absolute top-0 -right-8 p-1 text-text-tertiary hover:text-danger opacity-0 group-hover/bubble:opacity-100 transition-opacity"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="relative">
+                  {deleteConfirmId === msg.id ? (
+                    <div className="absolute left-2 bottom-0 flex items-center bg-background-card border border-border-subtle rounded-lg p-1 animate-in fade-in slide-in-from-left-2 z-10 shadow-xl min-w-[80px]">
+                      <button 
+                        onClick={() => handleDeleteMessage(msg.id)}
+                        className="text-[8px] font-black uppercase text-danger hover:underline px-2"
+                      >
+                        Supprimer ?
+                      </button>
+                      <button 
+                         onClick={() => setDeleteConfirmId(null)}
+                         className="text-[8px] font-black uppercase text-text-tertiary px-2"
+                      >
+                        Non
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setDeleteConfirmId(msg.id)}
+                      className="p-1 text-text-tertiary hover:text-danger opacity-0 group-hover/bubble:opacity-100 transition-opacity"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -285,6 +328,7 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
       {/* Messages */}
       <div 
         ref={scrollRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-4 space-y-2 scroll-smooth"
       >
         {messages.length === 0 ? (
@@ -299,11 +343,20 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
       </div>
 
       {/* Input / Identity */}
-      <div className="p-4 border-t border-border-subtle bg-background-secondary/30">
+      <div className="p-4 border-t border-border-subtle bg-background-secondary/30 relative">
+        {inputText.length > 400 && (
+          <span className={cn(
+            "absolute -top-6 right-4 text-[10px] font-bold px-2 py-0.5 rounded-full",
+            inputText.length > 480 ? "text-danger bg-danger/10" : "text-text-tertiary bg-background-secondary"
+          )}>
+            {inputText.length} / 500
+          </span>
+        )}
+
         {isSettingName ? (
           <form onSubmit={handleSetName} className="space-y-3">
             <p className="text-[9px] font-black uppercase tracking-widest text-text-tertiary text-center">
-              Identifie-toi pour participer au chat
+              Entre ton prénom pour participer au chat
             </p>
             <div className="flex gap-2">
               <input 
@@ -312,7 +365,7 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
                 placeholder="Ton prénom..."
                 className="flex-1 bg-background-secondary border border-border-subtle rounded-xl px-4 h-11 text-xs focus:border-accent-green outline-none text-white"
               />
-              <Button type="submit" size="sm" className="h-11 px-4 text-[10px]">OK</Button>
+              <Button type="submit" size="sm" className="h-11 px-4 text-[10px] bg-accent-green text-black uppercase font-black">Rejoindre</Button>
             </div>
           </form>
         ) : (
@@ -320,17 +373,17 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
             <input 
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="Écris ton message..."
+              placeholder="Écrire un message..."
               maxLength={500}
               className="flex-1 bg-background-secondary border border-border-subtle rounded-xl px-4 h-12 text-sm focus:border-accent-green outline-none text-white transition-all placeholder:text-text-tertiary"
             />
             <Button 
               type="submit" 
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim() || inputText.length > 500}
               size="icon" 
               className={cn(
                 "h-12 w-12 rounded-xl shrink-0 transition-all",
-                inputText.trim() ? "bg-accent-green text-black" : "bg-background-secondary text-text-tertiary"
+                inputText.trim() && inputText.length <= 500 ? "bg-accent-green text-black" : "bg-background-secondary text-text-tertiary opacity-50"
               )}
             >
               <Send size={18} />
@@ -344,7 +397,7 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
   return (
     <>
       {/* Desktop Sticky Panel */}
-      <div className="hidden lg:block w-[380px] h-[calc(100vh-80px)] sticky top-20 z-30">
+      <div className="hidden lg:block w-[380px] h-[calc(100vh-64px)] fixed top-[64px] right-0 z-30">
         {chatContent}
       </div>
 
@@ -352,7 +405,7 @@ export default function MatchChat({ matchId, currentUser, userProfile, isOrganiz
       <div className="lg:hidden fixed bottom-24 right-6 z-40">
         <button 
           onClick={() => setIsOpen(true)}
-          className="w-14 h-14 rounded-2xl bg-accent-green text-black shadow-[0_10px_30px_rgba(34,197,94,0.4)] flex items-center justify-center relative hover:scale-110 transition-transform active:scale-95"
+          className="w-[52px] h-[52px] rounded-full bg-accent-green text-black shadow-[0_10px_30px_rgba(34,197,94,0.4)] flex items-center justify-center relative hover:scale-110 transition-transform active:scale-95"
         >
           <MessageCircle size={24} />
           <AnimatePresence>

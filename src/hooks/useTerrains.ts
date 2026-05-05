@@ -1,61 +1,61 @@
-import * as React from 'react';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  limit, 
-  orderBy,
-  QueryConstraint
-} from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { collection, query, where, onSnapshot, orderBy, QueryConstraint } from 'firebase/firestore';
 import { db } from '@/src/lib/firebase';
 import { Terrain } from '@/src/lib/schema';
 
-interface Filters {
+interface TerrainFilters {
   city?: string;
-  type?: '6v6' | '7v7';
-  limitCount?: number;
+  type?: string;
+  complexId?: string;
 }
 
-export const useTerrains = (filters?: Filters) => {
-  const [terrains, setTerrains] = React.useState<Terrain[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<Error | null>(null);
+export function useTerrains(filters?: TerrainFilters) {
+  const [terrains, setTerrains] = useState<Terrain[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  React.useEffect(() => {
-    const fetchTerrains = async () => {
-      setIsLoading(true);
-      try {
-        const constraints: QueryConstraint[] = [where('isActive', '==', true)];
-        
-        if (filters?.city) {
-          constraints.push(where('city', '==', filters.city));
-        }
-        
-        if (filters?.type) {
-          constraints.push(where('type', '==', filters.type));
-        }
+  useEffect(() => {
+    setIsLoading(true);
+    
+    const constraints: QueryConstraint[] = [];
 
-        constraints.push(orderBy('createdAt', 'desc'));
+    // Optional: filter out inactive if not complexId specified, 
+    // but usually we want isActive check unless authorized.
+    // For public detail pages, definitely want isActive.
+    constraints.push(where('isActive', '==', true));
 
-        if (filters?.limitCount) {
-          constraints.push(limit(filters.limitCount));
-        }
+    if (filters?.city) {
+      constraints.push(where('city', '==', filters.city));
+    }
 
-        const q = query(collection(db, 'terrains'), ...constraints);
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Terrain));
-        setTerrains(data);
-      } catch (err) {
+    if (filters?.type) {
+      constraints.push(where('type', '==', filters.type));
+    }
+
+    if (filters?.complexId) {
+      constraints.push(where('complexId', '==', filters.complexId));
+    }
+
+    constraints.push(orderBy('createdAt', 'desc'));
+
+    const q = query(collection(db, 'terrains'), ...constraints);
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const terrainList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Terrain));
+        setTerrains(terrainList);
+        setIsLoading(false);
+      },
+      (err) => {
         console.error("Error fetching terrains:", err);
         setError(err as Error);
-      } finally {
         setIsLoading(false);
       }
-    };
+    );
 
-    fetchTerrains();
-  }, [filters?.city, filters?.type, filters?.limitCount]);
+    return () => unsubscribe();
+  }, [filters?.city, filters?.type, filters?.complexId]);
 
   return { terrains, isLoading, error };
-};
+}

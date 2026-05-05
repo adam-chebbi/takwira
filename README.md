@@ -70,12 +70,54 @@ npm run build   # Build pour la production
 - **Backend** : Firebase (Auth, Firestore, Storage)
 - **Design** : Recette "Swiss/Modern" (Polices : Inter, Barlow Condensed)
 
-## 📦 Déploiement (Vercel / Netlify)
+## 📦 Déploiement sur Vercel
 
-1. Connectez votre dépôt GitHub.
-2. Ajoutez les variables d'environnement.
-3. Configurez le build command : `npm run build`.
-4. Output directory : `dist`.
+Pour déployer Takwira sur Vercel, suivez ces étapes :
+
+1.  Connectez votre dépôt GitHub à un nouveau projet Vercel.
+2.  Dans les **Environment Variables**, ajoutez toutes les variables listées ci-dessous.
+3.  Vercel utilisera automatiquement la configuration du fichier `vercel.json` présent à la racine pour gérer le routage SPA et les en-têtes de sécurité.
+
+### Variables d'Environnement Obligatoires
+
+| Variable | Description | Source |
+| :--- | :--- | :--- |
+| `VITE_FIREBASE_API_KEY` | Clé API de votre projet Firebase | Console Firebase > Paramètres du projet |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Domaine d'authentification Firebase | Console Firebase > Paramètres du projet |
+| `VITE_FIREBASE_PROJECT_ID` | ID unique de votre projet Firebase | Console Firebase > Paramètres du projet |
+| `VITE_FIREBASE_STORAGE_BUCKET` | URL du bucket de stockage | Console Firebase > Paramètres du projet |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Identifiant d'envoi de messages | Console Firebase > Paramètres du projet |
+| `VITE_FIREBASE_APP_ID` | Identifiant unique de l'application | Console Firebase > Paramètres du projet |
+| `VITE_ADSENSE_PUBLISHER_ID` | Votre identifiant Google AdSense | Dashboard Google AdSense (`ca-pub-XXX`) |
+| `VITE_ADSENSE_SLOT_BLOG_LIST` | ID de l'emplacement pub liste blog | Dashboard Google AdSense |
+| `VITE_ADSENSE_SLOT_SIDEBAR_TOP` | ID de l'emplacement pub barre latérale haut | Dashboard Google AdSense |
+| `VITE_ADSENSE_SLOT_SIDEBAR_BOTTOM` | ID de l'emplacement pub barre latérale bas | Dashboard Google AdSense |
+| `VITE_ADSENSE_SLOT_INLINE` | ID de l'emplacement pub dans le contenu | Dashboard Google AdSense |
+| `VITE_GOOGLE_ADS_ID` | ID de suivi Google Ads | Dashboard Google Ads (`AW-XXX`) |
+
+> **Note :** La variable `GEMINI_API_KEY` n'est pas requise en production car elle est spécifique à l'environnement de développement AI Studio.
+
+## 🚀 CI/CD avec GitHub Actions
+
+Le projet est configuré avec un pipeline automatisé qui valide le code et déploie sur Vercel à chaque modification.
+
+### Configuration Ponctuelle (Setup)
+
+1.  Installez la CLI Vercel : `npm install -g vercel`
+2.  Connectez-vous : `vercel login`
+3.  Liez le projet : `vercel link` (ID de l'organisation et du projet seront générés dans `.vercel/project.json`)
+4.  Commitez le fichier `.vercel/project.json` (il ne contient pas de secrets).
+
+### Secrets GitHub Requis
+
+Dans les **Settings > Secrets and Variables > Actions** de votre dépôt GitHub, ajoutez les secrets suivants :
+
+*   `VERCEL_TOKEN` : Créé dans [Vercel Tokens](https://vercel.com/account/tokens).
+*   `VERCEL_ORG_ID` : Trouvé dans `.vercel/project.json`.
+*   `VERCEL_PROJECT_ID` : Trouvé dans `.vercel/project.json`.
+*   **Toutes les variables VITE_*** listées dans le tableau précédent.
+
+Une fois configuré, chaque push sur `main` déploiera automatiquement sur `takwira.vercel.app`.
 
 ---
 *Développé avec ❤️ pour la communauté de footballeurs en Tunisie.*

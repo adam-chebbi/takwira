@@ -10,16 +10,20 @@ import {
   MapPin, 
   Smartphone,
   ShieldCheck,
-  Lock
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { 
   RecaptchaVerifier, 
   signInWithPhoneNumber, 
   ConfirmationResult,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  signOut
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/src/lib/firebase';
+import { useAuth } from '@/src/contexts/AuthContext';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { useToast } from '@/src/components/ui/Toast';
@@ -39,23 +43,20 @@ export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
+  const { refreshProfile } = useAuth();
   const [currentStep, setCurrentStep] = React.useState<Step>('PHONE');
   const [phoneNumber, setPhoneNumber] = React.useState('');
   const [otp, setOtp] = React.useState(['', '', '', '', '', '']);
+  const [otpError, setOtpError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [confirmationResult, setConfirmationResult] = React.useState<ConfirmationResult | null>(null);
   const [recaptchaVerifier, setRecaptchaVerifier] = React.useState<RecaptchaVerifier | null>(null);
-  const [isNewUser, setIsNewUser] = React.useState(false);
   const [shake, setShake] = React.useState(false);
   
-  // Profile Setup State
-  const [fullName, setFullName] = React.useState('');
-  const [city, setCity] = React.useState('');
-  const [selectedRole, setSelectedRole] = React.useState<UserRole | null>(null);
-
   // Admin Login State
   const [adminEmail, setAdminEmail] = React.useState('');
   const [adminPassword, setAdminPassword] = React.useState('');
+  const [showAdminPassword, setShowAdminPassword] = React.useState(false);
 
   const otpRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
@@ -117,27 +118,41 @@ export default function Auth() {
     setIsLoading(true);
     try {
       const result = await confirmationResult.confirm(code);
-      const user = result.user;
+      const firebaseUser = result.user;
       
       // Check if user exists in Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
       
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        toast(`Content de vous revoir, ${userData.name}`, 'success');
-        if (userData.role === 'manager') navigate('/dashboard');
-        else if (userData.role === 'admin') navigate('/admin');
-        else navigate(from);
+        await refreshProfile();
+        toast(`Ravi de vous revoir, ${userData.firstName || userData.name} !`, 'success');
+        
+        if (userData.role === 'admin') {
+          navigate('/admin');
+        } else if (userData.role === 'manager') {
+          navigate('/dashboard');
+        } else {
+          // Redirect to originally requested page or home
+          navigate(from);
+        }
       } else {
-        setIsNewUser(true);
         setCurrentStep('ONBOARDING');
       }
     } catch (error: any) {
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-      toast("Code incorrect", 'error');
-      setOtp(['', '', '', '', '', '']);
-      otpRefs.current[0]?.focus();
+      if (error.code === 'auth/invalid-verification-code') {
+        setShake(true);
+        setOtpError("Code incorrect. Réessaye.");
+        setOtp(['', '', '', '', '', '']);
+        otpRefs.current[0]?.focus();
+        setTimeout(() => setShake(false), 400);
+      } else if (error.code === 'auth/code-expired') {
+        toast("Le code a expiré. Demande un nouveau code.", 'error');
+        setCurrentStep('PHONE');
+        setOtp(['', '', '', '', '', '']);
+      } else {
+        toast("Une erreur est survenue", 'error');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -166,11 +181,15 @@ export default function Auth() {
       };
       
       await setDoc(doc(db, 'users', user.uid), userData);
+      await refreshProfile();
       
       toast(`Bienvenue sur Takwira, ${onboardingData.firstName} ! 🎉`, 'success');
       
-      if (onboardingData.role === 'manager') navigate('/inscription-gerant');
-      else navigate('/', { state: { fromOnboarding: true } });
+      if (onboardingData.role === 'manager') {
+        navigate('/inscription-gerant');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       toast("Erreur lors de la création du profil", 'error');
     } finally {
@@ -186,11 +205,13 @@ export default function Auth() {
       const userDoc = await getDoc(doc(db, 'users', result.user.uid));
       
       if (!userDoc.exists() || userDoc.data()?.role !== 'admin') {
-        await auth.signOut();
-        toast("Accès administrateur requis", 'error');
+        await signOut(auth);
+        toast("Accès non autorisé.", 'error');
         return;
       }
       
+      await refreshProfile();
+      toast("Connexion administrateur réussie", 'success');
       navigate('/admin');
     } catch (error: any) {
       toast("Identifiants incorrects", 'error');
@@ -268,9 +289,9 @@ export default function Auth() {
               <div className="text-center">
                 <button 
                   onClick={() => setCurrentStep('ADMIN')}
-                  className="text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-accent-green transition-colors"
+                  className="text-[11px] font-medium uppercase tracking-widest text-text-tertiary hover:text-accent-green transition-colors mt-4"
                 >
-                  Accès administrateur
+                  Accès administrateur →
                 </button>
               </div>
             </motion.div>
@@ -289,6 +310,7 @@ export default function Auth() {
                   onClick={() => {
                     setCurrentStep('PHONE');
                     setOtp(['', '', '', '', '', '']);
+                    setOtpError(null);
                   }}
                   className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-accent-green transition-colors mb-4"
                 >
@@ -300,23 +322,34 @@ export default function Auth() {
                 </p>
               </div>
 
-              <div className={cn("flex justify-between gap-2 md:gap-4", shake && "animate-shake")}>
-                {otp.map((digit, i) => (
-                  <input
-                    key={i}
-                    ref={(el) => { otpRefs.current[i] = el; }}
-                    type="text"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(i, e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Backspace' && !digit && i > 0) {
-                        otpRefs.current[i - 1]?.focus();
-                      }
-                    }}
-                    className="w-full h-14 md:h-16 bg-background-secondary border border-border-subtle focus:border-accent-green focus:shadow-[0_0_15px_rgba(0,255,135,0.2)] focus:outline-none rounded-xl text-center text-2xl font-display font-black transition-all"
-                  />
-                ))}
+              <div className="space-y-4">
+                <div className={cn("flex justify-between gap-2 md:gap-4", shake && "animate-shake")}>
+                  {otp.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => { otpRefs.current[i] = el; }}
+                      type="text"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => {
+                        setOtpError(null);
+                        handleOtpChange(i, e.target.value);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Backspace' && !digit && i > 0) {
+                          otpRefs.current[i - 1]?.focus();
+                        }
+                      }}
+                      className={cn(
+                        "w-full h-14 md:h-16 bg-background-secondary border focus:outline-none rounded-xl text-center text-2xl font-display font-black transition-all",
+                        otpError ? "border-danger focus:border-danger" : "border-border-subtle focus:border-accent-green focus:shadow-[0_0_15px_rgba(0,255,135,0.2)]"
+                      )}
+                    />
+                  ))}
+                </div>
+                {otpError && (
+                  <p className="text-danger text-xs font-bold text-center animate-fade-in">{otpError}</p>
+                )}
               </div>
 
               <div className="text-center pt-4">
@@ -349,9 +382,9 @@ export default function Auth() {
           {currentStep === 'ADMIN' && (
             <motion.div 
               key="admin"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 20, opacity: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               className="space-y-8"
             >
               <div className="space-y-2">
@@ -378,20 +411,26 @@ export default function Auth() {
                         required
                         value={adminEmail}
                         onChange={(e) => setAdminEmail(e.target.value)}
-                        className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl px-4 h-14 font-sans text-sm transition-all"
+                        className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl px-4 h-14 font-sans text-sm transition-all text-white"
                       />
                    </div>
                    <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary ml-1">Mot de passe</label>
                       <div className="relative group">
                          <input 
-                           type="password"
+                           type={showAdminPassword ? "text" : "password"}
                            required
                            value={adminPassword}
                            onChange={(e) => setAdminPassword(e.target.value)}
-                           className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl px-4 h-14 font-sans text-sm transition-all"
+                           className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl px-4 h-14 font-sans text-sm transition-all text-white"
                          />
-                         <Lock className="absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
+                         <button 
+                           type="button"
+                           onClick={() => setShowAdminPassword(!showAdminPassword)}
+                           className="absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-white transition-colors"
+                         >
+                           {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                         </button>
                       </div>
                    </div>
                 </div>
@@ -401,7 +440,7 @@ export default function Auth() {
                   disabled={isLoading}
                   className="w-full h-16 font-black uppercase tracking-widest bg-white text-black hover:bg-accent-green transition-colors"
                 >
-                  {isLoading ? <Loader2 className="animate-spin" /> : "Connexion Admin"}
+                  {isLoading ? <Loader2 className="animate-spin" /> : "Se connecter"}
                 </Button>
               </form>
             </motion.div>
@@ -412,9 +451,10 @@ export default function Auth() {
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-8px); }
-          50% { transform: translateX(8px); }
-          75% { transform: translateX(-8px); }
+          20% { transform: translateX(-8px); }
+          40% { transform: translateX(8px); }
+          60% { transform: translateX(-6px); }
+          80% { transform: translateX(6px); }
         }
         .animate-shake {
           animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;

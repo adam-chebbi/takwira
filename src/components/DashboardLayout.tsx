@@ -15,6 +15,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { Badge } from '@/src/components/ui/Badge';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { PageLoader } from '@/src/components/ui/PageLoader';
+import { useManagerComplex } from '@/src/hooks/useManagerComplex';
+import { User as UserProfile } from '@/src/lib/schema';
+import { Skeleton } from '@/src/components/ui/Skeleton';
 
 const NAV_ITEMS = [
   { id: 'home', label: 'Tableau de Bord', icon: LayoutDashboard, path: '/dashboard' },
@@ -27,38 +32,39 @@ const NAV_ITEMS = [
 
 export default function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = React.useState(true);
+  const { userProfile, signOut, isLoading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Auth Guard Simulation
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      // Simulation: Only 'manager' role can access
-      // In a real app we'd check session/user role
-      setIsCheckingAuth(false);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleLogout = () => {
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
-  if (isCheckingAuth) {
-    return (
-      <div className="min-h-screen bg-background-primary flex flex-col items-center justify-center space-y-4">
-         <div className="w-12 h-12 border-4 border-accent-green/30 border-t-accent-green rounded-full animate-spin" />
-         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-text-tertiary">Vérification des accès...</p>
-      </div>
-    );
+  if (isLoading) {
+    return <PageLoader />;
   }
+
+  const getInitials = (name: string | undefined) => {
+    if (!name) return '??';
+    return name
+      .split(' ')
+      .filter(n => n.length > 0)
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   return (
     <div className="min-h-screen bg-background-primary flex">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-[280px] flex-col bg-background-card border-r border-border-subtle fixed h-screen z-50">
-         <SidebarContent onLogout={handleLogout} />
+         <SidebarContent onLogout={handleLogout} userProfile={userProfile} />
       </aside>
 
       {/* Mobile Sidebar Overlay */}
@@ -79,7 +85,7 @@ export default function DashboardLayout() {
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className="fixed inset-y-0 left-0 w-[280px] bg-background-card border-r border-border-subtle z-[110] lg:hidden"
             >
-               <SidebarContent onLogout={handleLogout} onClose={() => setIsSidebarOpen(false)} />
+               <SidebarContent onLogout={handleLogout} onClose={() => setIsSidebarOpen(false)} userProfile={userProfile} />
             </motion.aside>
           </>
         )}
@@ -102,7 +108,7 @@ export default function DashboardLayout() {
               </Link>
            </div>
            <div className="w-8 h-8 rounded-full bg-accent-green flex items-center justify-center text-black font-black text-xs">
-              GS
+              {getInitials(userProfile?.name)}
            </div>
         </header>
 
@@ -124,8 +130,9 @@ export default function DashboardLayout() {
   );
 }
 
-function SidebarContent({ onLogout, onClose }: { onLogout: () => void; onClose?: () => void }) {
+function SidebarContent({ onLogout, onClose, userProfile }: { onLogout: () => void; onClose?: () => void; userProfile: UserProfile | null }) {
   const location = useLocation();
+  const { complex, isLoading } = useManagerComplex(userProfile?.id);
 
   return (
     <div className="flex flex-col h-full py-8">
@@ -136,7 +143,13 @@ function SidebarContent({ onLogout, onClose }: { onLogout: () => void; onClose?:
       </Link>
         
         <div className="space-y-1 px-8">
-           <h3 className="text-lg font-display font-black uppercase tracking-tight text-white">Gammarth Foot Center</h3>
+           <h3 className="text-lg font-display font-black uppercase tracking-tight text-white">
+             {isLoading ? (
+               <Skeleton className="h-6 w-3/4 bg-white/10" />
+             ) : (
+               complex?.name || "Mon Complexe"
+             )}
+           </h3>
            <Badge className="bg-accent-green/10 text-accent-green border-accent-green/20 uppercase font-black text-[9px] tracking-widest h-6">
              Gérant Vérifié ✓
            </Badge>

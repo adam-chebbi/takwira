@@ -10,7 +10,7 @@ import { useMatches } from '@/src/hooks/useMatches';
 
 export default function Matches() {
   const [filter, setFilter] = React.useState('all');
-  const { matches, isLoading } = useMatches({ status: 'upcoming' });
+  const { matches, isLoading } = useMatches({ status: 'open' });
 
   return (
     <div className="pt-32 pb-20 px-6 md:px-12 max-w-7xl mx-auto space-y-12">

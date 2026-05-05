@@ -3,16 +3,18 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Home, MapPin, CircleDot, Calendar, User } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
+import { useAuth } from '@/src/contexts/AuthContext';
 
 export default function BottomNav() {
   const location = useLocation();
+  const { user } = useAuth();
 
   const navItems = [
     { label: 'Accueil', icon: Home, path: '/' },
     { label: 'Explorer', icon: MapPin, path: '/terrains' },
-    { label: 'Jouer', icon: CircleDot, path: '/matches', special: true },
-    { label: 'Tournois', icon: Calendar, path: '/tournaments' },
-    { label: 'Profil', icon: User, path: '/profil' },
+    { label: 'Jouer', icon: CircleDot, path: '/creer-match', special: true },
+    { label: 'Mes Matchs', icon: Calendar, path: '/mes-matchs' },
+    { label: 'Profil', icon: User, path: user ? '/profil' : '/connexion' },
   ];
 
   // Hidden on specific flows

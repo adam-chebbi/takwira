@@ -1,21 +1,9 @@
-import { collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 
-export type NotificationType = 
-  | 'reservation_confirmed' 
-  | 'reservation_cancelled' 
-  | 'match_full' 
-  | 'team_published' 
-  | 'new_player_joined' 
-  | 'academy_expiring' 
-  | 'general';
-
-/**
- * Creates a notification in Firestore for a specific user
- */
 export async function createNotification(
   userId: string,
-  type: NotificationType,
+  type: string,
   title: string,
   body: string,
   relatedId?: string
@@ -26,11 +14,12 @@ export async function createNotification(
       type,
       title,
       body,
-      relatedId,
+      relatedId: relatedId || null,
       isRead: false,
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
     });
   } catch (error) {
+    // Silently log errors; notification failure should not block main flows
     console.error('Error creating notification:', error);
   }
 }

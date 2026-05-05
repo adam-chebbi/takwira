@@ -40,7 +40,7 @@ export function BlogPostCard({ post }: BlogPostCardProps) {
             {/* Read Time Overlay */}
             <div className="absolute top-4 right-4 z-10">
               <div className="bg-[#faf9fa]/80 backdrop-blur-md text-pl-purple border border-border-subtle font-bold text-[9px] uppercase tracking-widest h-7 px-3 rounded-full flex items-center gap-1.5 shadow-sm">
-                <Clock size={10} /> {post.readTime}
+                <Clock size={10} /> {post.readTimeMinutes}
               </div>
             </div>
           </div>

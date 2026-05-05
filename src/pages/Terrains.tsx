@@ -73,7 +73,7 @@ export default function Terrains() {
   });
 
   return (
-    <div className="flex flex-col md:pt-20 bg-background-primary">
+    <div className="flex flex-col flex-1 md:pt-20 bg-background-primary min-h-[calc(100vh-400px)]">
       <SEO title="Trouve ton terrain | Takwira.com" />
       {/* Top Search & Filter Bar */}
       <div className="sticky top-0 md:top-20 z-30 bg-white border-b border-border-subtle p-4 pb-2 md:px-8">

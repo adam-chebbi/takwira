@@ -20,7 +20,8 @@ import {
   AlertTriangle,
   X,
   MapPin,
-  Check
+  Check,
+  Info
 } from 'lucide-react';
 import { 
   DndContext, 
@@ -47,20 +48,16 @@ import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { Badge } from '@/src/components/ui/Badge';
 import { cn } from '@/src/lib/utils';
-import { updateDoc, doc } from 'firebase/firestore';
+import { updateDoc, doc, deleteDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/src/lib/firebase';
 import { createNotification } from '@/src/lib/notifications';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { useMatch } from '@/src/hooks/useMatch';
+import MatchChat from '@/src/components/match/MatchChat';
+import { useToast } from '@/src/components/ui/Toast';
+import { MatchPlayer } from '@/src/lib/schema';
 
-// --- Types ---
-interface Player {
-  id: string;
-  name: string;
-  phone?: string;
-  userId?: string;
-  status: 'confirmed' | 'absent' | 'pending';
-  team?: 'A' | 'B';
-}
-
+// --- Helpers ---
 const AVATAR_COLORS = [
   'bg-blue-500',
   'bg-purple-500',
@@ -86,9 +83,8 @@ const getInitials = (name: string) => {
 
 // --- Sortable Item Component ---
 interface SortablePlayerChipProps {
-  player: Player;
+  player: MatchPlayer;
   isDragging?: boolean;
-  key?: string | number;
 }
 
 function SortablePlayerChip({ player, isDragging }: SortablePlayerChipProps) {
@@ -116,36 +112,25 @@ function SortablePlayerChip({ player, isDragging }: SortablePlayerChipProps) {
         isDragging ? "opacity-50 scale-95" : "hover:border-accent-green/30"
       )}
     >
-      <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0", getAvatarColor(player.name))}>
-        {getInitials(player.name)}
+      <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0", getAvatarColor(player.playerName))}>
+        {getInitials(player.playerName)}
       </div>
-      <span className="font-bold uppercase tracking-wider text-xs truncate">{player.name}</span>
+      <span className="font-bold uppercase tracking-wider text-xs truncate">{player.playerName}</span>
     </div>
   );
 }
 
-import { useAuth } from '@/src/contexts/AuthContext';
-import { useMatch } from '@/src/hooks/useMatch';
-import MatchChat from '@/src/components/match/MatchChat';
-
 export default function MatchManage() {
   const { token } = useParams();
   const { user, userProfile } = useAuth();
-  const { match, isLoading: matchLoading } = useMatch(token);
+  const { match, players, isLoading: matchLoading } = useMatch(token);
   const navigate = useNavigate();
-  const [isCheckingAuth, setIsCheckingAuth] = React.useState(true);
+  const { toast } = useToast();
+
   const [activeTab, setActiveTab] = React.useState<'players' | 'teams'>('players');
   const [teamMode, setTeamMode] = React.useState<'random' | 'manual'>('random');
-  const [players, setPlayers] = React.useState<Player[]>([
-    { id: '1', name: 'Ahmed', phone: '55123456', status: 'confirmed' },
-    { id: '2', name: 'Sami', phone: '22987654', status: 'confirmed' },
-    { id: '3', name: 'Yassine', phone: '98456123', status: 'confirmed' },
-    { id: '4', name: 'Mehdi', phone: '44112233', status: 'confirmed' },
-    { id: '5', name: 'Karim', phone: '21009988', status: 'confirmed' },
-    { id: '6', name: 'Omar', status: 'confirmed' },
-    { id: '7', name: 'Skander', status: 'confirmed' },
-    { id: '8', name: 'Adel', status: 'confirmed' },
-  ]);
+  const [localPlayers, setLocalPlayers] = React.useState<MatchPlayer[]>([]);
+  
   const [isAddingPlayer, setIsAddingPlayer] = React.useState(false);
   const [newPlayerName, setNewPlayerName] = React.useState('');
   const [newPlayerPhone, setNewPlayerPhone] = React.useState('');
@@ -155,64 +140,129 @@ export default function MatchManage() {
   const [phoneVisibility, setPhoneVisibility] = React.useState<Record<string, boolean>>({});
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
-  // Auth Guard Simulation
+  // Sync local players with hook players for team building (local sorting/assignment)
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      // Simulation: Ahmed S. is the organizer. In a real app we check the token.
-      setIsCheckingAuth(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    if (players.length > 0) {
+      setLocalPlayers(players);
+    }
+  }, [players]);
+
+  // Auth Guard
+  React.useEffect(() => {
+    if (!matchLoading && match) {
+      if (!user || match.organizerId !== user.uid) {
+        toast("Accès réservé à l'organisateur.", 'error');
+        navigate(`/match/${token}`);
+      }
+    }
+  }, [matchLoading, match, user, navigate, token, toast]);
 
   const togglePhoneVisibility = (id: string) => {
     setPhoneVisibility(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const removePlayer = (id: string) => {
-    setPlayers(prev => prev.filter(p => p.id !== id));
+  const markAbsent = async (id: string) => {
+    try {
+      await updateDoc(doc(db, 'matchPlayers', id), {
+        status: 'absent'
+      });
+      toast("Joueur marqué absent", 'info');
+    } catch (err) {
+      console.error(err);
+      toast("Impossible de mettre à jour le statut.", 'error');
+    }
   };
 
-  const cycleStatus = (id: string) => {
-    setPlayers(prev => prev.map(p => {
-      if (p.id !== id) return p;
-      const statusMap: Record<string, 'confirmed' | 'absent' | 'pending'> = {
-        'confirmed': 'absent',
-        'absent': 'pending',
-        'pending': 'confirmed'
-      };
-      return { ...p, status: statusMap[p.status] };
-    }));
+  const removePlayer = async (id: string) => {
+    if (!window.confirm("Voulez-vous vraiment retirer ce joueur ?")) return;
+    try {
+      await deleteDoc(doc(db, 'matchPlayers', id));
+      toast("Joueur retiré du match", 'success');
+    } catch (err) {
+      console.error(err);
+      toast("Erreur lors de la suppression.", 'error');
+    }
   };
 
-  const handleAddPlayer = (e: React.FormEvent) => {
+  const handleManualAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPlayerName.trim()) return;
-    const newPlayer: Player = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newPlayerName,
-      phone: newPlayerPhone,
-      status: 'confirmed'
-    };
-    setPlayers(prev => [newPlayer, ...prev]);
-    setNewPlayerName('');
-    setNewPlayerPhone('');
-    setIsAddingPlayer(false);
+    if (!newPlayerName.trim() || !match) return;
+    
+    try {
+      await addDoc(collection(db, 'matchPlayers'), {
+        matchId: match.id,
+        playerName: newPlayerName,
+        playerPhone: newPlayerPhone || null,
+        userId: null,
+        status: 'confirmed',
+        joinedAt: serverTimestamp()
+      });
+      
+      setNewPlayerName('');
+      setNewPlayerPhone('');
+      setIsAddingPlayer(false);
+      toast(`${newPlayerName} a rejoint le match.`, 'success');
+    } catch (err) {
+      console.error(err);
+      toast("Impossible d'ajouter le joueur.", 'error');
+    }
   };
 
   const handleRandomizeTeams = () => {
     setIsShuffling(true);
     setTimeout(() => {
-      const shuffled = [...players].sort(() => Math.random() - 0.5);
-      const newPlayers = players.map(p => {
+      const confirmedPlayers = localPlayers.filter(p => p.status === 'confirmed');
+      const shuffled = [...confirmedPlayers].sort(() => Math.random() - 0.5);
+      
+      const newPlayers = localPlayers.map(p => {
+        if (p.status !== 'confirmed') return p;
         const index = shuffled.findIndex(s => s.id === p.id);
-        return { ...p, team: index < shuffled.length / 2 ? 'A' : 'B' } as Player;
+        return { ...p, team: index < shuffled.length / 2 ? 'A' : 'B' };
       });
-      setPlayers(newPlayers);
+      
+      setLocalPlayers(newPlayers);
       setIsShuffling(false);
     }, 1500);
   };
 
-  // DND Handlers
+  const handleCancelMatch = async () => {
+    if (cancelConfirmText.toLowerCase() !== 'annuler') {
+      toast("Veuillez saisir 'annuler' pour confirmer.", 'error');
+      return;
+    }
+
+    if (!match) return;
+
+    try {
+      await updateDoc(doc(db, 'matches', match.id), {
+        status: 'cancelled'
+      });
+
+      if (match.reservationId) {
+        await updateDoc(doc(db, 'reservations', match.reservationId), {
+          status: 'cancelled'
+        });
+      }
+
+      const confirmedWithUserId = players.filter(p => p.userId && p.status === 'confirmed');
+      for (const p of confirmedWithUserId) {
+        await createNotification(
+          p.userId!,
+          'reservation_cancelled',
+          'Match annulé',
+          `Le match "${match.title}" a été annulé par l'organisateur.`,
+          match.id
+        );
+      }
+
+      toast("Le match a été annulé avec succès.", 'success');
+      navigate('/mes-matchs');
+    } catch (err) {
+      console.error(err);
+      toast("Erreur lors de l'annulation.", 'error');
+    }
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -224,17 +274,6 @@ export default function MatchManage() {
     setActiveId(event.active.id as string);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    // Logic to handle moving across containers if using Multiple containers
-    // For simplicity here, we define three lists
-  };
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
@@ -244,34 +283,48 @@ export default function MatchManage() {
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // Check if over container
-    if (overId === 'teamA') {
-      setPlayers(prev => prev.map(p => p.id === activeId ? { ...p, team: 'A' } as Player : p));
-    } else if (overId === 'teamB') {
-      setPlayers(prev => prev.map(p => p.id === activeId ? { ...p, team: 'B' } as Player : p));
-    } else if (overId === 'unassigned') {
-      setPlayers(prev => prev.map(p => p.id === activeId ? { ...p, team: undefined } : p));
+    setLocalPlayers(prev => prev.map(p => {
+      if (p.id !== activeId) return p;
+      if (overId === 'teamA') return { ...p, team: 'A' };
+      if (overId === 'teamB') return { ...p, team: 'B' };
+      if (overId === 'unassigned') return { ...p, team: undefined };
+      return p;
+    }));
+  };
+
+  const handlePublishTeams = async () => {
+    if (!match) return;
+    
+    try {
+      const teamA = localPlayers.filter(p => (p as any).team === 'A').map(p => p.playerName);
+      const teamB = localPlayers.filter(p => (p as any).team === 'B').map(p => p.playerName);
+      
+      await updateDoc(doc(db, 'matches', match.id), {
+        teamA,
+        teamB,
+        teamsPublished: true
+      });
+
+      const playersToNotify = players.filter(p => p.userId && p.status === 'confirmed');
+      for (const p of playersToNotify) {
+        await createNotification(
+          p.userId!,
+          'team_published',
+          'Équipes publiées !',
+          `Les équipes pour le match "${match.title}" sont prêtes. Découvre la tienne !`,
+          match.id
+        );
+      }
+      
+      toast("Équipes publiées !", 'success');
+      navigate(`/match/${token}`);
+    } catch (err) {
+      console.error("Error publishing teams:", err);
+      toast("Erreur lors de la publication.", 'error');
     }
   };
 
-  const autoBalance = () => {
-    const unassigned = players.filter(p => !p.team);
-    const teamA = players.filter(p => p.team === 'A');
-    const teamB = players.filter(p => p.team === 'B');
-
-    let newPlayers = [...players];
-    unassigned.forEach((p, i) => {
-      const targetTeam = (teamA.length + i) <= (teamB.length + (unassigned.length - i - 1)) ? 'A' : 'B';
-      newPlayers = newPlayers.map(np => np.id === p.id ? { ...np, team: targetTeam as 'A' | 'B' } : np);
-    });
-    setPlayers(newPlayers);
-  };
-
-  const resetTeams = () => {
-    setPlayers(prev => prev.map(p => ({ ...p, team: undefined })));
-  };
-
-  if (isCheckingAuth || matchLoading) {
+  if (matchLoading || !match) {
     return (
       <div className="min-h-screen pt-32 pb-20 bg-background-primary px-4">
         <div className="max-w-4xl mx-auto space-y-8 animate-pulse text-center">
@@ -288,72 +341,37 @@ export default function MatchManage() {
     );
   }
 
-  const handlePublishTeams = async () => {
-    if (!match) return;
-    
-    try {
-      const teamA = players.filter(p => p.team === 'A').map(p => p.name);
-      const teamB = players.filter(p => p.team === 'B').map(p => p.name);
-      
-      await updateDoc(doc(db, 'matches', match.id), {
-        teamA,
-        teamB,
-        teamsPublished: true
-      });
-
-      // Notify all players who have a userId
-      const playersToNotify = players.filter(p => p.userId);
-      for (const p of playersToNotify) {
-        if (p.userId) {
-          await createNotification(
-            p.userId,
-            'team_published',
-            'Équipes publiées !',
-            `Les équipes pour le match "${match.title}" sont prêtes. Découvre la tienne !`,
-            match.id
-          );
-        }
-      }
-      
-      // Navigate to public page to see result
-      navigate(`/match/${token}`);
-    } catch (err) {
-      console.error("Error publishing teams:", err);
-    }
-  };
-
-  const effectiveMatchId = match?.id || token || 'demo';
+  const confirmedCount = players.filter(p => p.status === 'confirmed').length;
+  const spotsLeft = Math.max(0, match.maxPlayers - confirmedCount);
+  const matchUrl = typeof window !== 'undefined' ? `${window.location.origin}/match/${token}` : "";
 
   return (
-    <div className="min-h-screen bg-background-primary flex">
+    <div className="min-h-screen bg-background-primary flex flex-col">
       <div className="flex-1 pt-24 pb-32 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-4 md:px-8">
         
-        {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div className="space-y-1">
             <h1 className="text-4xl md:text-6xl font-display font-black uppercase tracking-tight leading-none text-text-primary">
               Gérer <span className="text-accent-green">le Match</span>
             </h1>
             <p className="text-text-secondary font-medium uppercase tracking-widest text-xs">
-              {MOCK_MATCH_DATA.name} · {MOCK_MATCH_DATA.complex}
+              {match.title} · {match.complexName}
             </p>
           </div>
           <Link 
             to={`/match/${token}`} 
-            target="_blank"
             className="flex items-center gap-2 text-accent-green font-bold text-xs uppercase tracking-widest hover:underline group"
           >
             Voir la page publique <ExternalLink size={14} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
           </Link>
         </div>
 
-        {/* Stats Bar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           {[
-            { label: "Joueurs inscrits", val: players.length, color: "text-accent-green" },
-            { label: "Places restantes", val: 12 - players.length, color: "text-text-primary" },
-            { label: "Statut terrain", val: "CONFIRMÉ", color: "text-accent-green", isBadge: true }
+            { label: "Confirmés", val: confirmedCount, color: "text-accent-green" },
+            { label: "Places restantes", val: spotsLeft, color: spotsLeft > 0 ? "text-text-primary" : "text-warning" },
+            { label: "Statut match", val: match.status.toUpperCase(), color: match.status === 'confirmed' ? "text-accent-green" : "text-warning", isBadge: true }
           ].map((stat, i) => (
             <motion.div
               key={i}
@@ -361,12 +379,15 @@ export default function MatchManage() {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: i * 0.1 }}
             >
-              <Card className="p-6 bg-background-card border-t-2 border-accent-green relative overflow-hidden group">
+              <Card className={cn("p-6 bg-background-card border-t-2 relative overflow-hidden group", i === 0 ? "border-accent-green" : "border-border-subtle")}>
                 <div className="absolute inset-0 bg-accent-green/[0.02] opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="space-y-1 relative">
                    <p className="text-[10px] uppercase font-black tracking-widest text-text-tertiary">{stat.label}</p>
                    {stat.isBadge ? (
-                     <Badge className="bg-accent-green/10 text-accent-green border-accent-green/20 font-black h-8 px-4 mt-2">
+                     <Badge className={cn(
+                       "font-black h-8 px-4 mt-2",
+                       match.status === 'confirmed' ? "bg-accent-green/10 text-accent-green border-accent-green/20" : "bg-warning/10 text-warning border-warning/20"
+                     )}>
                        {stat.val}
                      </Badge>
                    ) : (
@@ -378,7 +399,6 @@ export default function MatchManage() {
           ))}
         </div>
 
-        {/* Player Management Section */}
         <section className="space-y-8 mb-20">
           <div className="flex items-center justify-between border-b border-border-subtle pb-4">
              <h2 className="text-2xl font-display font-black uppercase tracking-tight">Liste des joueurs</h2>
@@ -409,16 +429,16 @@ export default function MatchManage() {
                     <div className="flex items-center gap-4 flex-1">
                       <div className={cn(
                          "w-12 h-12 rounded-full flex items-center justify-center text-white font-display font-bold border-2 border-white/5",
-                         getAvatarColor(player.name)
+                         getAvatarColor(player.playerName)
                       )}>
-                        {getInitials(player.name)}
+                        {getInitials(player.playerName)}
                       </div>
                       <div className="space-y-1">
-                        <h4 className="font-bold uppercase tracking-wider text-sm">{player.name}</h4>
-                        {player.phone && (
+                        <h4 className="font-bold uppercase tracking-wider text-sm">{player.playerName}</h4>
+                        {player.playerPhone && (
                           <div className="flex items-center gap-2 text-[10px] font-sans font-bold text-text-secondary">
                              <span className="tracking-[0.2em]">
-                               {phoneVisibility[player.id] ? `+216 ${player.phone}` : "+216 **** ****"}
+                               {phoneVisibility[player.id] ? `+216 ${player.playerPhone}` : "+216 **** ****"}
                              </span>
                              <button onClick={() => togglePhoneVisibility(player.id)} className="hover:text-accent-green">
                                {phoneVisibility[player.id] ? <EyeOff size={12} /> : <Eye size={12} />}
@@ -429,18 +449,16 @@ export default function MatchManage() {
                     </div>
 
                     <div className="flex items-center gap-4">
-                      <div className="cursor-pointer" onClick={() => cycleStatus(player.id)}>
-                        <Badge 
-                          className={cn(
-                            "h-8 px-4 font-black uppercase tracking-widest text-[9px] select-none pointer-events-none",
-                            player.status === 'confirmed' ? "bg-accent-green/10 text-accent-green border-accent-green/20" :
-                            player.status === 'absent' ? "bg-danger/10 text-danger border-danger/20" :
-                            "bg-warning/10 text-warning border-warning/20"
-                          )}
-                        >
-                          {player.status === 'confirmed' ? 'Confirmé' : player.status === 'absent' ? 'Absent' : 'En attente'}
-                        </Badge>
-                      </div>
+                      <Badge 
+                        className={cn(
+                          "h-8 px-4 font-black uppercase tracking-widest text-[9px] select-none",
+                          player.status === 'confirmed' ? "bg-accent-green/10 text-accent-green border-accent-green/20" :
+                          player.status === 'absent' ? "bg-danger/10 text-danger border-danger/20" :
+                          "bg-warning/10 text-warning border-warning/20"
+                        )}
+                      >
+                        {player.status === 'confirmed' ? 'Confirmé' : player.status === 'absent' ? 'Absent' : 'En attente'}
+                      </Badge>
 
                       <div className="relative group/menu">
                         <Button variant="outline" size="sm" className="h-10 w-10 p-0 text-text-tertiary">
@@ -448,10 +466,10 @@ export default function MatchManage() {
                         </Button>
                         <div className="absolute right-0 top-full mt-2 w-48 bg-background-card border border-border-subtle rounded-xl shadow-2xl opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all z-50 overflow-hidden">
                            <button 
-                             onClick={() => cycleStatus(player.id)}
-                             className="w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-background-secondary flex items-center gap-2"
+                             onClick={() => markAbsent(player.id)}
+                             className="w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-background-secondary flex items-center gap-2 text-danger"
                            >
-                              <CheckCircle2 size={14} className="text-accent-green" /> Changer statut
+                              <UserMinus size={14} /> Marquer Absent
                            </button>
                            <button 
                              onClick={() => removePlayer(player.id)}
@@ -478,7 +496,6 @@ export default function MatchManage() {
           </div>
         </section>
 
-        {/* Team Builder Section */}
         <section className="space-y-8 mb-20">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
              <h2 className="text-3xl font-display font-black uppercase tracking-tight">Constitution des Équipes</h2>
@@ -505,7 +522,6 @@ export default function MatchManage() {
           </div>
 
           <div className="bg-background-card rounded-[32px] border border-border-subtle p-8 md:p-12 relative overflow-hidden min-h-[500px]">
-             {/* Decorative grid bg */}
              <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
                   style={{ backgroundImage: 'radial-gradient(circle, #22C55E 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
 
@@ -521,10 +537,10 @@ export default function MatchManage() {
                     {isShuffling ? (
                       <div className="flex flex-col items-center py-20">
                          <div className="relative w-48 h-48">
-                            {players.map((p, i) => (
+                            {localPlayers.map((p, i) => (
                               <motion.div
                                 key={p.id}
-                                className={cn("absolute w-12 h-12 rounded-full border-2 border-white/10 flex items-center justify-center text-[8px] font-black", getAvatarColor(p.name))}
+                                className={cn("absolute w-12 h-12 rounded-full border-2 border-white/10 flex items-center justify-center text-[8px] font-black", getAvatarColor(p.playerName))}
                                 initial={{ top: '50%', left: '50%' }}
                                 animate={{ 
                                   top: `${50 + Math.sin(i * 137) * 40}%`, 
@@ -533,19 +549,19 @@ export default function MatchManage() {
                                 }}
                                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                               >
-                                {getInitials(p.name)}
+                                {getInitials(p.playerName)}
                               </motion.div>
                             ))}
                          </div>
                          <p className="mt-8 text-xl font-display font-black uppercase tracking-tight text-accent-green animate-pulse">Brassage en cours...</p>
                       </div>
-                    ) : players.some(p => p.team) ? (
+                    ) : localPlayers.some(p => (p as any).team) ? (
                       <div className="w-full space-y-12">
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                             <div className="space-y-6">
-                               <Badge className="bg-accent-green text-black font-black uppercase tracking-[0.3em] w-full justify-center h-12 text-sm shadow-[0_0_20px_rgba(34,197,94,0.3)]">Équipe A ({players.filter(p => p.team === 'A').length})</Badge>
+                               <Badge className="bg-accent-green text-black font-black uppercase tracking-[0.3em] w-full justify-center h-12 text-sm shadow-[0_0_20px_rgba(34,197,94,0.3)]">Équipe A ({localPlayers.filter(p => (p as any).team === 'A').length})</Badge>
                                <div className="space-y-2">
-                                  {players.filter(p => p.team === 'A').map((p, i) => (
+                                  {localPlayers.filter(p => (p as any).team === 'A').map((p, i) => (
                                     <motion.div 
                                       key={p.id} 
                                       initial={{ x: -20, opacity: 0 }} 
@@ -553,18 +569,18 @@ export default function MatchManage() {
                                       transition={{ delay: i * 0.05 }}
                                       className="flex items-center gap-3 p-3 bg-background-primary/50 rounded-2xl border border-border-subtle"
                                     >
-                                       <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black", getAvatarColor(p.name))}>
-                                         {getInitials(p.name)}
+                                       <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black", getAvatarColor(p.playerName))}>
+                                         {getInitials(p.playerName)}
                                        </div>
-                                       <span className="font-bold uppercase tracking-wider text-xs">{p.name}</span>
+                                       <span className="font-bold uppercase tracking-wider text-xs">{p.playerName}</span>
                                     </motion.div>
                                   ))}
                                </div>
                             </div>
                             <div className="space-y-6">
-                               <Badge className="bg-background-secondary text-text-secondary border border-border-subtle font-black uppercase tracking-[0.3em] w-full justify-center h-12 text-sm">Équipe B ({players.filter(p => p.team === 'B').length})</Badge>
+                               <Badge className="bg-background-secondary text-text-secondary border border-border-subtle font-black uppercase tracking-[0.3em] w-full justify-center h-12 text-sm">Équipe B ({localPlayers.filter(p => (p as any).team === 'B').length})</Badge>
                                <div className="space-y-2">
-                                  {players.filter(p => p.team === 'B').map((p, i) => (
+                                  {localPlayers.filter(p => (p as any).team === 'B').map((p, i) => (
                                     <motion.div 
                                       key={p.id} 
                                       initial={{ x: 20, opacity: 0 }} 
@@ -572,10 +588,10 @@ export default function MatchManage() {
                                       transition={{ delay: i * 0.05 }}
                                       className="flex items-center gap-3 p-3 bg-background-primary/50 rounded-2xl border border-border-subtle"
                                     >
-                                       <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black", getAvatarColor(p.name))}>
-                                         {getInitials(p.name)}
+                                       <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black", getAvatarColor(p.playerName))}>
+                                         {getInitials(p.playerName)}
                                        </div>
-                                       <span className="font-bold uppercase tracking-wider text-xs">{p.name}</span>
+                                       <span className="font-bold uppercase tracking-wider text-xs">{p.playerName}</span>
                                     </motion.div>
                                   ))}
                                </div>
@@ -585,7 +601,7 @@ export default function MatchManage() {
                             <Button onClick={handleRandomizeTeams} variant="outline" className="flex-1 h-14 uppercase font-black text-xs tracking-widest gap-2">
                                <RotateCcw size={18} /> Re-mélanger
                             </Button>
-                            <Button className="flex-[2] h-14 uppercase font-black text-xs tracking-widest gap-2">
+                            <Button onClick={handlePublishTeams} className="flex-[2] h-14 uppercase font-black text-xs tracking-widest gap-2">
                                <Check size={18} /> Valider et Publier
                             </Button>
                          </div>
@@ -602,7 +618,7 @@ export default function MatchManage() {
                          </motion.button>
                          <div className="text-center space-y-2">
                             <h3 className="text-2xl font-display font-black uppercase">Générer les équipes</h3>
-                            <p className="text-text-secondary text-sm max-w-xs">On brassage les joueurs pour créer deux équipes équilibrées en un clic.</p>
+                            <p className="text-text-secondary text-sm max-w-xs">On brasse les joueurs pour créer deux équipes équilibrées en un clic.</p>
                          </div>
                          <Button onClick={handleRandomizeTeams} className="h-14 px-12 font-black uppercase tracking-widest">
                             Lancer le tirage au sort
@@ -622,69 +638,76 @@ export default function MatchManage() {
                       sensors={sensors}
                       collisionDetection={closestCenter}
                       onDragStart={handleDragStart}
-                      onDragOver={handleDragOver}
                       onDragEnd={handleDragEnd}
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                         {/* Team A Drop Zone */}
                          <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Équipe A</span>
-                               <Badge className="bg-accent-green text-black font-black uppercase text-[10px]">{players.filter(p => p.team === 'A').length}</Badge>
+                               <Badge className="bg-accent-green text-black font-black uppercase text-[10px]">{localPlayers.filter(p => (p as any).team === 'A').length}</Badge>
                             </div>
                             <div id="teamA" className={cn(
                               "min-h-[200px] p-4 bg-background-primary/50 border-2 border-dashed rounded-[32px] transition-colors flex flex-col gap-3",
-                              players.filter(p => p.team === 'A').length === 0 ? "border-border-subtle" : "border-accent-green/30"
+                              localPlayers.filter(p => (p as any).team === 'A').length === 0 ? "border-border-subtle" : "border-accent-green/30"
                             )}>
-                              <SortableContext items={players.filter(p => p.team === 'A').map(p => p.id)} strategy={verticalListSortingStrategy}>
-                                {players.filter(p => p.team === 'A').map(p => (
+                              <SortableContext items={localPlayers.filter(p => (p as any).team === 'A').map(p => p.id)} strategy={verticalListSortingStrategy}>
+                                {localPlayers.filter(p => (p as any).team === 'A').map(p => (
                                   <SortablePlayerChip key={p.id} player={p} />
                                 ))}
                               </SortableContext>
-                              {players.filter(p => p.team === 'A').length === 0 && (
+                              {localPlayers.filter(p => (p as any).team === 'A').length === 0 && (
                                 <div className="flex-1 flex items-center justify-center text-text-tertiary text-xs font-bold uppercase tracking-widest opacity-20">DÉPOSER ICI</div>
                               )}
                             </div>
                          </div>
 
-                         {/* Team B Drop Zone */}
                          <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Équipe B</span>
-                               <Badge className="bg-background-secondary text-text-secondary border border-border-subtle font-black uppercase text-[10px]">{players.filter(p => p.team === 'B').length}</Badge>
+                               <Badge className="bg-background-secondary text-text-secondary border border-border-subtle font-black uppercase text-[10px]">{localPlayers.filter(p => (p as any).team === 'B').length}</Badge>
                             </div>
                             <div id="teamB" className={cn(
                               "min-h-[200px] p-4 bg-background-primary/50 border-2 border-dashed rounded-[32px] transition-colors flex flex-col gap-3",
-                              players.filter(p => p.team === 'B').length === 0 ? "border-border-subtle" : "border-white/20"
+                              localPlayers.filter(p => (p as any).team === 'B').length === 0 ? "border-border-subtle" : "border-white/20"
                             )}>
-                              <SortableContext items={players.filter(p => p.team === 'B').map(p => p.id)} strategy={verticalListSortingStrategy}>
-                                {players.filter(p => p.team === 'B').map(p => (
+                              <SortableContext items={localPlayers.filter(p => (p as any).team === 'B').map(p => p.id)} strategy={verticalListSortingStrategy}>
+                                {localPlayers.filter(p => (p as any).team === 'B').map(p => (
                                   <SortablePlayerChip key={p.id} player={p} />
                                 ))}
                               </SortableContext>
-                              {players.filter(p => p.team === 'B').length === 0 && (
+                              {localPlayers.filter(p => (p as any).team === 'B').length === 0 && (
                                 <div className="flex-1 flex items-center justify-center text-text-tertiary text-xs font-bold uppercase tracking-widest opacity-20">DÉPOSER ICI</div>
                               )}
                             </div>
                          </div>
                       </div>
 
-                      {/* Unassigned Pool */}
                       <div className="space-y-6 pt-12 border-t border-border-subtle">
                          <div className="flex items-center justify-between">
                             <h4 className="text-sm font-bold uppercase tracking-widest text-text-tertiary">Joueurs disponibles</h4>
                             <div className="flex gap-2">
-                               <Button size="sm" variant="outline" onClick={autoBalance} className="h-9 px-4 text-[10px] uppercase font-black tracking-widest gap-2">
+                               <Button size="sm" variant="outline" onClick={() => {
+                                 const unassigned = localPlayers.filter(p => !(p as any).team && p.status === 'confirmed');
+                                 const teamA = localPlayers.filter(p => (p as any).team === 'A');
+                                 const teamB = localPlayers.filter(p => (p as any).team === 'B');
+                                 
+                                 let newPlayers = [...localPlayers];
+                                 unassigned.forEach((p, i) => {
+                                   const targetTeam = (teamA.length + i) <= (teamB.length + (unassigned.length - i - 1)) ? 'A' : 'B';
+                                   newPlayers = newPlayers.map(np => np.id === p.id ? { ...np, team: targetTeam as 'A' | 'B' } : np);
+                                 });
+                                 setLocalPlayers(newPlayers);
+                               }} className="h-9 px-4 text-[10px] uppercase font-black tracking-widest gap-2">
                                   <Shuffle size={12} /> Équilibrer
                                </Button>
-                               <Button size="sm" variant="outline" onClick={resetTeams} className="h-9 px-4 text-[10px] uppercase font-black tracking-widest gap-2 border-danger/30 text-danger hover:bg-danger/10">
+                               <Button size="sm" variant="outline" onClick={() => setLocalPlayers(prev => prev.map(p => ({ ...p, team: undefined })))} className="h-9 px-4 text-[10px] uppercase font-black tracking-widest gap-2 border-danger/30 text-danger hover:bg-danger/10">
                                   Tout effacer
                                </Button>
                             </div>
                          </div>
                          <div id="unassigned" className="p-6 bg-background-secondary/30 border border-border-subtle rounded-[24px] flex flex-wrap gap-3 min-h-[100px]">
-                            <SortableContext items={players.filter(p => !p.team).map(p => p.id)}>
-                              {players.filter(p => !p.team).map(p => (
+                            <SortableContext items={localPlayers.filter(p => !(p as any).team && p.status === 'confirmed').map(p => p.id)}>
+                              {localPlayers.filter(p => !(p as any).team && p.status === 'confirmed').map(p => (
                                 <SortablePlayerChip key={p.id} player={p} />
                               ))}
                             </SortableContext>
@@ -703,10 +726,10 @@ export default function MatchManage() {
                         {activeId ? (
                           <div className="flex items-center gap-3 p-3 bg-accent-green text-black rounded-2xl border border-accent-green shadow-2xl scale-105">
                             <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center text-[10px] font-black text-black shrink-0">
-                              {getInitials(players.find(p => p.id === activeId)?.name || '')}
+                              {getInitials(localPlayers.find(p => p.id === activeId)?.playerName || '')}
                             </div>
                             <span className="font-bold uppercase tracking-wider text-xs truncate">
-                              {players.find(p => p.id === activeId)?.name}
+                              {localPlayers.find(p => p.id === activeId)?.playerName}
                             </span>
                           </div>
                         ) : null}
@@ -724,7 +747,6 @@ export default function MatchManage() {
           </div>
         </section>
 
-        {/* Share Section */}
         <section className="mb-20">
           <Card className="p-8 md:p-12 space-y-8 bg-background-card border-border-subtle">
              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -733,22 +755,30 @@ export default function MatchManage() {
                    <p className="text-text-secondary text-sm">Envoie ce lien à tous les joueurs pour qu'ils s'inscrivent.</p>
                 </div>
                 <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-                   <Button className="h-14 px-8 uppercase font-black text-xs tracking-widest gap-3 w-full md:w-auto">
+                   <Button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(matchUrl);
+                      toast("Lien copié !", 'success');
+                    }}
+                    className="h-14 px-8 uppercase font-black text-xs tracking-widest gap-3 w-full md:w-auto"
+                   >
                       <Copy size={18} /> Copier le lien
                    </Button>
-                   <Button className="h-14 px-8 uppercase font-black text-xs tracking-widest gap-3 w-full md:w-auto bg-[#25D366] hover:bg-[#128C7E] border-none text-white">
+                   <Button 
+                    onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent("Rejoins notre match sur Takwira : " + matchUrl)}`, '_blank')}
+                    className="h-14 px-8 uppercase font-black text-xs tracking-widest gap-3 w-full md:w-auto bg-[#25D366] hover:bg-[#128C7E] border-none text-white"
+                   >
                       <Share2 size={18} /> Partager via WhatsApp
                    </Button>
                 </div>
              </div>
              
              <div className="p-4 bg-background-primary rounded-xl border border-border-subtle text-center font-mono text-xs text-accent-green truncate">
-                takwira.com/match/{token}
+                {matchUrl}
              </div>
           </Card>
         </section>
 
-        {/* Danger Zone */}
         <section className="pt-12 border-t border-border-subtle">
            <div className="flex flex-col items-center gap-8">
               <div className="flex items-center gap-3 text-danger opacity-50 px-6 py-2 rounded-full border border-danger/30 uppercase font-black text-[10px] tracking-widest">
@@ -768,13 +798,12 @@ export default function MatchManage() {
       </div>
 
     <MatchChat 
-      matchId={effectiveMatchId} 
+      matchId={match.id} 
       currentUser={user} 
       userProfile={userProfile} 
       isOrganizer={true}
     />
 
-      {/* Manual Add Player Modal */}
       <AnimatePresence>
         {isAddingPlayer && (
           <>
@@ -790,7 +819,7 @@ export default function MatchManage() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 left-0 right-0 z-[210] lg:relative lg:inset-center lg:z-auto bg-background-card rounded-t-[32px] p-8 pb-12 lg:rounded-3xl border-t border-border-subtle lg:max-w-md lg:mx-auto lg:top-1/2 lg:-translate-y-1/2 lg:fixed"
+              className="fixed bottom-0 left-0 right-0 z-[210] lg:relative lg:inset-center lg:z-auto bg-background-card rounded-t-[32px] p-8 pb-12 lg:rounded-3xl border-t border-border-subtle lg:max-w-md lg:mx-auto lg:top-1/2 lg:-translate-y-1/2 lg:fixed shadow-2xl"
             >
                <div className="flex justify-between items-start mb-8">
                   <h3 className="text-3xl font-display font-black uppercase leading-none">Ajouter un <br /> joueur</h3>
@@ -799,33 +828,39 @@ export default function MatchManage() {
                   </button>
                </div>
 
-               <form onSubmit={handleAddPlayer} className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary ml-1">Prénom du joueur</label>
-                       <input 
-                         required
-                         type="text"
-                         value={newPlayerName}
-                         onChange={(e) => setNewPlayerName(e.target.value)}
-                         className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl px-4 h-14 font-sans text-sm transition-all"
-                         placeholder="Ex: Mourad"
-                       />
-                    </div>
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary ml-1">Téléphone (Optionnel)</label>
-                       <input 
-                         type="tel"
-                         value={newPlayerPhone}
-                         onChange={(e) => setNewPlayerPhone(e.target.value)}
-                         className="w-full bg-background-secondary border border-border-subtle focus:border-accent-green focus:outline-none rounded-xl px-4 h-14 font-sans text-sm transition-all"
-                         placeholder="+216 00 000 000"
-                       />
-                    </div>
+               <form onSubmit={handleManualAdd} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Nom du joueur *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={newPlayerName}
+                      onChange={(e) => setNewPlayerName(e.target.value)}
+                      placeholder="Ex: Ahmed"
+                      className="w-full h-14 bg-background-primary border border-border-subtle rounded-2xl px-6 focus:outline-none focus:border-accent-green transition-colors font-bold"
+                    />
                   </div>
 
-                  <Button type="submit" className="w-full h-16 font-black uppercase tracking-widest">
-                    Ajouter à la liste
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Téléphone (Optionnel)</label>
+                    <input 
+                      type="tel"
+                      value={newPlayerPhone}
+                      onChange={(e) => setNewPlayerPhone(e.target.value)}
+                      placeholder="Ex: 55 123 456"
+                      className="w-full h-14 bg-background-primary border border-border-subtle rounded-2xl px-6 focus:outline-none focus:border-accent-green transition-colors font-bold"
+                    />
+                  </div>
+
+                  <div className="flex items-start gap-3 p-4 bg-background-secondary rounded-2xl border border-border-subtle">
+                    <Info size={16} className="text-accent-green shrink-0 mt-0.5" />
+                    <p className="text-[10px] text-text-secondary leading-relaxed font-medium">
+                      Ce joueur sera ajouté directement avec le statut <span className="text-accent-green font-bold">CONFIRMÉ</span>.
+                    </p>
+                  </div>
+
+                  <Button type="submit" className="w-full h-16 uppercase font-black tracking-widest">
+                    Confirmer l'ajout
                   </Button>
                </form>
             </motion.div>
@@ -833,7 +868,6 @@ export default function MatchManage() {
         )}
       </AnimatePresence>
 
-      {/* Cancel Confirmation Modal */}
       <AnimatePresence>
         {isCancelling && (
           <>
@@ -841,75 +875,43 @@ export default function MatchManage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[300] bg-overlay px-4 flex items-center justify-center"
+              onClick={() => setIsCancelling(false)}
+              className="fixed inset-0 z-[300] bg-overlay"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="fixed inset-center z-[310] w-full max-w-md p-8 bg-background-card border border-border-subtle rounded-3xl space-y-8 shadow-2xl"
             >
-               <motion.div 
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  className="bg-background-card border border-danger/30 rounded-3xl p-8 max-w-sm w-full space-y-6 relative overflow-hidden"
-               >
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-danger" />
-                  <div className="w-12 h-12 bg-danger/10 text-danger rounded-full flex items-center justify-center mx-auto mb-2">
-                     <AlertTriangle size={24} />
+               <div className="text-center space-y-4">
+                  <div className="w-20 h-20 bg-danger/10 text-danger rounded-full flex items-center justify-center mx-auto">
+                    <AlertTriangle size={40} />
                   </div>
-                  <div className="text-center space-y-2">
-                     <h3 className="text-2xl font-display font-black uppercase">Annuler le match ?</h3>
-                     <p className="text-text-secondary text-xs leading-relaxed">
-                        Cette action est irréversible. Les joueurs inscrits recevront une notification d'annulation.
-                     </p>
+                  <div className="space-y-2">
+                    <h3 className="text-3xl font-display font-black uppercase">Annuler le match ?</h3>
+                    <p className="text-text-secondary text-sm">Cette action informera tous les joueurs et annulera la réservation du terrain.</p>
                   </div>
+               </div>
 
-                  <div className="space-y-3">
-                     <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary text-center">
-                        Tapez <span className="text-danger">ANNULER</span> pour confirmer
-                     </p>
-                     <input 
-                        type="text"
-                        value={cancelConfirmText}
-                        onChange={(e) => setCancelConfirmText(e.target.value)}
-                        className="w-full bg-background-secondary border border-border-subtle focus:border-danger focus:outline-none rounded-xl px-4 h-12 font-sans text-center text-sm"
-                        placeholder="..."
-                     />
-                  </div>
+               <div className="space-y-4">
+                  <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-widest text-center">Tapez <span className="text-danger">"ANNULER"</span> pour confirmer</p>
+                  <input 
+                    type="text"
+                    value={cancelConfirmText}
+                    onChange={(e) => setCancelConfirmText(e.target.value)}
+                    className="w-full h-14 bg-background-primary border-2 border-danger/20 rounded-2xl px-6 text-center focus:outline-none focus:border-danger transition-colors font-black uppercase tracking-widest"
+                  />
+               </div>
 
-                  <div className="flex flex-col gap-3">
-                     <Button 
-                       disabled={cancelConfirmText !== 'ANNULER'}
-                       className="w-full h-12 bg-danger hover:bg-danger-hover border-none text-white font-bold uppercase tracking-widest text-[10px]"
-                       onClick={() => navigate('/')}
-                     >
-                       Confirmer l'annulation
-                     </Button>
-                     <button 
-                       onClick={() => { setIsCancelling(false); setCancelConfirmText(''); }}
-                       className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary hover:text-white pt-2"
-                     >
-                        Annuler
-                     </button>
-                  </div>
-               </motion.div>
+               <div className="flex gap-4">
+                  <Button variant="outline" onClick={() => setIsCancelling(false)} className="flex-1 h-14 uppercase font-black text-xs">Fermer</Button>
+                  <Button onClick={handleCancelMatch} className="flex-1 h-14 bg-danger hover:bg-danger/80 text-white uppercase font-black text-xs border-none">Confirmer</Button>
+               </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
-
-      <style>{`
-        .inset-center {
-           left: 50%;
-           top: 50%;
-           transform: translate(-50%, -50%);
-        }
-      `}</style>
-
     </div>
   );
 }
-
-const MOCK_MATCH_DATA = {
-  name: "Match du Mercredi soir",
-  complex: "Gammarth Foot Center",
-  terrain: "Terrain 1",
-  date: "22 Mai",
-  time: "19:00"
-};

@@ -1,3 +1,4 @@
+/// <reference path="./pwa.d.ts" />
 import * as React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
@@ -39,6 +40,7 @@ import Contact from '@/src/pages/Contact';
 import About from '@/src/pages/About';
 import BlogList from '@/src/pages/BlogList';
 import BlogPostDetail from '@/src/pages/BlogPostDetail';
+import NotificationsPage from '@/src/pages/Notifications';
 import BlogCMSList from '@/src/pages/BlogCMSList';
 import BlogCMSEditor from '@/src/pages/BlogCMSEditor';
 import AdminAds from '@/src/pages/AdminAds';
@@ -268,6 +270,16 @@ const AnimatedRoutes = () => {
           element={
             <PageTransition>
               <BlogPostDetail />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <PageTransition>
+              <ProtectedRoute>
+                <NotificationsPage />
+              </ProtectedRoute>
             </PageTransition>
           }
         />

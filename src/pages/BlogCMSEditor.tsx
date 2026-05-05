@@ -22,6 +22,7 @@ import slugify from 'slugify';
 import DOMPurify from 'dompurify';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useToast } from '@/src/components/ui/Toast';
 
 const CATEGORIES = ["Actualités", "Conseils", "Terrains", "Interviews", "Communauté"];
 
@@ -30,9 +31,11 @@ export default function BlogCMSEditor() {
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const { post: existingPost, loading: loadingPost } = useBlogPost(id || '', false);
+  const { toast } = useToast();
   
   const [title, setTitle] = React.useState('');
   const [slug, setSlug] = React.useState('');
+  const [slugManuallyEdited, setSlugManuallyEdited] = React.useState(false);
   const [excerpt, setExcerpt] = React.useState('');
   const [content, setContent] = React.useState('');
   const [category, setCategory] = React.useState(CATEGORIES[0]);
@@ -40,6 +43,7 @@ export default function BlogCMSEditor() {
   const [coverImageUrl, setCoverImageUrl] = React.useState('');
   const [status, setStatus] = React.useState<'draft' | 'published'>('draft');
   const [publishedAt, setPublishedAt] = React.useState<any>(null);
+  const [readTimeMinutes, setReadTimeMinutes] = React.useState(1);
   
   const [isUploading, setIsUploading] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -52,6 +56,7 @@ export default function BlogCMSEditor() {
     if (existingPost) {
       setTitle(existingPost.title);
       setSlug(existingPost.slug);
+      setSlugManuallyEdited(true);
       setExcerpt(existingPost.excerpt);
       setContent(existingPost.content);
       setCategory(existingPost.category);
@@ -59,18 +64,36 @@ export default function BlogCMSEditor() {
       setCoverImageUrl(existingPost.coverImageUrl);
       setStatus(existingPost.status === 'archived' ? 'draft' : existingPost.status as any);
       setPublishedAt(existingPost.publishedAt);
+      setReadTimeMinutes(existingPost.readTimeMinutes || 1);
     }
   }, [existingPost]);
 
+  // Read time calculation
+  React.useEffect(() => {
+    const text = content.replace(/<[^>]*>/g, ' ');
+    const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+    setReadTimeMinutes(Math.max(1, Math.ceil(wordCount / 200)));
+  }, [content]);
+
   // Auto-generate slug
   React.useEffect(() => {
-    if (title && !id) {
-       handleRegenSlug();
+    if (title && !slugManuallyEdited) {
+       setSlug(slugify(title, { lower: true, strict: true }));
     }
-  }, [title, id]);
+  }, [title, slugManuallyEdited]);
+
+  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSlug(e.target.value);
+    if (e.target.value === '') {
+      setSlugManuallyEdited(false);
+    } else {
+      setSlugManuallyEdited(true);
+    }
+  };
 
   const handleRegenSlug = () => {
     setSlug(slugify(title, { lower: true, strict: true }));
+    setSlugManuallyEdited(false);
   };
 
   const handleAddTag = (e: React.KeyboardEvent) => {
@@ -99,8 +122,10 @@ export default function BlogCMSEditor() {
       const snapshot = await uploadBytes(storageRef, file);
       const url = await getDownloadURL(snapshot.ref);
       setCoverImageUrl(url);
+      toast("Image de couverture uploadée.", 'success');
     } catch (error) {
        console.error("Error uploading file:", error);
+       toast("Erreur d'upload.", 'error');
     } finally {
        setIsUploading(false);
     }
@@ -108,8 +133,11 @@ export default function BlogCMSEditor() {
 
   const handleSave = async (finalStatus?: 'published' | 'draft') => {
     if (!title || !content || !coverImageUrl) {
-      alert("Titre, contenu et image de couverture sont requis.");
-      return;
+      if (finalStatus === 'published') {
+        toast("Titre, contenu et image sont requis pour publier.", 'error');
+        return;
+      }
+      if (!title && finalStatus === 'draft') return; // Don't save empty drafts
     }
 
     setIsSaving(true);
@@ -126,12 +154,13 @@ export default function BlogCMSEditor() {
       coverImageUrl,
       status: newStatus,
       updatedAt: serverTimestamp(),
-      readTime: `${Math.ceil(content.split(' ').length / 200)} min`,
+      readTimeMinutes,
       ...(isNowPublishing ? { publishedAt: serverTimestamp() } : {}),
       ...(existingPost ? {} : { 
         createdAt: serverTimestamp(), 
         authorId: user?.uid || '', 
         authorName: userProfile?.name || 'Admin',
+        authorAvatarUrl: userProfile?.avatarUrl || '',
         viewCount: 0
       })
     };
@@ -142,14 +171,17 @@ export default function BlogCMSEditor() {
       } else {
         const newPostRef = doc(collection(db, 'blogPosts'));
         await setDoc(newPostRef, { ...postData, id: newPostRef.id });
-        navigate(`/admin/blog/${newPostRef.id}/modifier`);
+        navigate(`/admin/blog/${newPostRef.id}/modifier`, { replace: true });
       }
       setLastSaved(new Date());
       if (finalStatus === 'published') {
          setStatus('published');
+         toast("Article publié !", 'success');
+         navigate('/admin/blog');
       }
     } catch (error) {
       console.error("Error saving post:", error);
+      toast("Erreur lors de la sauvegarde.", 'error');
     } finally {
       setIsSaving(false);
     }
@@ -157,13 +189,16 @@ export default function BlogCMSEditor() {
 
   // Auto-save logic
   React.useEffect(() => {
-    const timer = setInterval(() => {
-      if (id && title && content) {
+    if (!id || status === 'published') return;
+
+    const timer = setTimeout(() => {
+      if (title && content) {
         handleSave('draft');
       }
     }, 30000);
-    return () => clearInterval(timer);
-  }, [id, title, content, excerpt, category, tags, coverImageUrl]);
+
+    return () => clearTimeout(timer);
+  }, [id, title, content, excerpt, category, tags, coverImageUrl, status]);
 
   if (id && loadingPost) {
     return (
@@ -186,20 +221,29 @@ export default function BlogCMSEditor() {
           )}
        </div>
        
-       <div className="space-y-6 mb-10">
+       <div className="space-y-6 mb-10 text-left">
           <Badge className="bg-accent-green text-black border-none font-black text-[10px] uppercase tracking-widest h-8 px-4">
             {category}
           </Badge>
-          <h1 className="text-4xl md:text-5xl font-display font-black uppercase text-white leading-tight">
+          <h1 className="text-4xl md:text-5xl font-display font-black uppercase text-text-primary leading-tight">
             {title || "Titre de l'article"}
           </h1>
-          <p className="text-lg text-text-secondary font-medium italic">
+          <p className="text-base text-text-secondary font-medium">
             {excerpt || "Extrait de l'article..."}
           </p>
+          <div className="flex items-center gap-4 py-4 border-y border-border-subtle">
+             <div className="w-10 h-10 rounded-full bg-accent-green/10 flex items-center justify-center text-accent-green font-black">
+                {userProfile?.name?.charAt(0) || 'A'}
+             </div>
+             <div>
+                <p className="text-xs font-black uppercase text-text-primary">{userProfile?.name || 'Admin'}</p>
+                <p className="text-[9px] font-bold text-text-tertiary uppercase">{format(new Date(), 'dd MMMM yyyy', { locale: fr })} • {readTimeMinutes} min</p>
+             </div>
+          </div>
        </div>
 
        <div 
-         className="blog-content prose prose-invert prose-p:text-text-primary prose-p:text-lg prose-p:leading-relaxed prose-headings:font-display prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight max-w-none"
+         className="blog-content text-left"
          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} 
        />
     </div>
@@ -260,17 +304,17 @@ export default function BlogCMSEditor() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Titre de l'article..."
-                  className="w-full bg-transparent border-b border-border-subtle focus:border-accent-green py-4 outline-none text-3xl font-display font-black uppercase text-white placeholder:text-text-tertiary"
+                  className="w-full bg-transparent border-b border-border-subtle focus:border-accent-green py-4 outline-none text-3xl font-display font-black uppercase text-text-primary placeholder:text-text-tertiary"
                 />
-                <div className="flex items-center gap-3 bg-background-secondary/30 p-3 rounded-xl border border-border-subtle">
+                <div className="flex items-center gap-3 bg-background-secondary p-3 rounded-xl border border-border-subtle shadow-inner">
                    <p className="text-[10px] font-mono text-text-tertiary shrink-0">takwira.com/blog/</p>
                    <input 
                      value={slug}
-                     onChange={(e) => setSlug(e.target.value)}
+                     onChange={handleSlugChange}
                      className="flex-1 bg-transparent border-none outline-none text-[10px] font-mono text-accent-green p-0"
                    />
-                   <button onClick={handleRegenSlug} className="text-text-tertiary hover:text-white transition-colors">
-                     <RefreshCw size={14} />
+                   <button onClick={handleRegenSlug} className="text-text-tertiary hover:text-text-primary transition-colors">
+                     <RefreshCw size={14} className={cn(!slugManuallyEdited && "animate-spin-once")} />
                    </button>
                 </div>
               </div>
@@ -282,7 +326,7 @@ export default function BlogCMSEditor() {
                    value={excerpt}
                    onChange={(e) => setExcerpt(e.target.value.slice(0, 150))}
                    placeholder="Résumé court de l'article..."
-                   className="w-full bg-background-secondary border border-border-subtle rounded-2xl p-4 text-sm font-medium outline-none focus:border-accent-green text-white min-h-[100px] resize-none"
+                   className="w-full bg-background-secondary border border-border-subtle rounded-2xl p-4 text-sm font-medium outline-none focus:border-accent-green text-text-primary min-h-[100px] resize-none"
                  />
                  <p className="text-[9px] font-black text-right text-text-tertiary uppercase tracking-widest">
                    {excerpt.length} / 150
@@ -376,7 +420,7 @@ export default function BlogCMSEditor() {
               {/* Rich Text Editor */}
               <div className="space-y-4">
                  <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Contenu de l'article</label>
-                 <RichTextEditor value={content} onChange={setContent} placeholder="Écris l'histoire ici..." />
+                 <RichTextEditor postId={id || 'new-post'} value={content} onChange={setContent} placeholder="Écris l'histoire ici..." />
               </div>
             </div>
           </div>

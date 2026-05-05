@@ -21,6 +21,7 @@ import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { Badge } from '@/src/components/ui/Badge';
 import { cn } from '@/src/lib/utils';
+import { useToast } from '@/src/components/ui/Toast';
 
 // --- Mock Data ---
 const TERRAINS = [
@@ -52,6 +53,7 @@ const INITIAL_RESERVATIONS: Reservation[] = [
 ];
 
 export default function DashboardTerrains() {
+  const toast = useToast();
   const [selectedTerrain, setSelectedTerrain] = React.useState(TERRAINS[0]);
   const [reservations, setReservations] = React.useState(INITIAL_RESERVATIONS);
   const [selectedSlot, setSelectedSlot] = React.useState<{ day: number, hour: number } | null>(null);
@@ -88,7 +90,10 @@ export default function DashboardTerrains() {
           <h1 className="text-4xl font-display font-black uppercase tracking-tight">Gestion des Terrains</h1>
           <p className="text-text-secondary font-medium uppercase tracking-widest text-[10px]">Garde une vue d'ensemble sur tes créneaux</p>
         </div>
-        <Button className="h-12 px-8 uppercase font-black text-xs tracking-widest gap-2">
+        <Button 
+          onClick={() => toast("Le formulaire d'ajout de terrain sera disponible prochainement !", "info")}
+          className="h-12 px-8 uppercase font-black text-xs tracking-widest gap-2"
+        >
            <Plus size={18} /> Ajouter un terrain
         </Button>
       </div>

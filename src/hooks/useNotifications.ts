@@ -1,93 +1,79 @@
 import { useState, useEffect } from 'react';
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot, 
-  doc, 
-  updateDoc, 
-  deleteDoc,
-  writeBatch
-} from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/src/lib/firebase';
+import { AppNotification as Notification } from '@/src/lib/schema';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { AppNotification } from '@/src/lib/schema';
 
-export function useNotifications() {
+export function useNotifications(providedUserId?: string) {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const userId = providedUserId || user?.uid;
+
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!user) {
-      setNotifications([]);
-      setUnreadCount(0);
-      setLoading(false);
+    if (!userId) {
+      setIsLoading(false);
       return;
     }
 
+    setIsLoading(true);
+
     const q = query(
       collection(db, 'notifications'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc'),
+      limit(30)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allNotifs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as AppNotification[];
-
-      setNotifications(allNotifs);
-      setUnreadCount(allNotifs.filter(n => !n.isRead).length);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const notifList = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Notification));
+        setNotifications(notifList);
+        setUnreadCount(notifList.filter(n => !n.isRead).length);
+        setIsLoading(false);
+      },
+      (err) => {
+        console.error("Error fetching notifications:", err);
+        setError(err as Error);
+        setIsLoading(false);
+      }
+    );
 
     return () => unsubscribe();
-  }, [user]);
+  }, [userId]);
 
-  const markAsRead = async (id: string) => {
+  const markAsRead = async (notificationId: string) => {
     try {
-      await updateDoc(doc(db, 'notifications', id), { isRead: true });
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
+      const docRef = doc(db, 'notifications', notificationId);
+      await updateDoc(docRef, { isRead: true });
+    } catch (err) {
+      console.error("Error marking notification as read:", err);
     }
   };
 
   const markAllAsRead = async () => {
-    if (!user || notifications.length === 0) return;
-    
-    const unread = notifications.filter(n => !n.isRead);
-    if (unread.length === 0) return;
-
-    const batch = writeBatch(db);
-    unread.forEach(n => {
-      batch.update(doc(db, 'notifications', n.id), { isRead: true });
-    });
-
     try {
+      const { writeBatch, doc } = await import('firebase/firestore');
+      const batch = writeBatch(db);
+      const unreadNotifs = notifications.filter(n => !n.isRead);
+      unreadNotifs.forEach(n => {
+        batch.update(doc(db, 'notifications', n.id), { isRead: true });
+      });
       await batch.commit();
-    } catch (error) {
-      console.error('Error marking all as read:', error);
+    } catch (err) {
+      console.error("Error marking all as read:", err);
     }
   };
 
   const deleteNotification = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'notifications', id));
-    } catch (error) {
-      console.error('Error deleting notification:', error);
-    }
+    // Basic implementation for delete
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, 'notifications', id));
   };
 
-  return {
-    notifications,
-    unreadCount,
-    loading,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification
-  };
+  return { notifications, unreadCount, isLoading, error, markAsRead, markAllAsRead, deleteNotification };
 }

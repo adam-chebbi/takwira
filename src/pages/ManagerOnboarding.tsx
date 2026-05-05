@@ -1,8 +1,11 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { db, auth } from '@/src/lib/firebase';
+import { db, auth, storage } from '@/src/lib/firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { useToast } from '@/src/components/ui/Toast';
 import { trackManagerSignup } from '@/src/lib/googleAds';
 import { 
   Building2, 
@@ -47,20 +50,24 @@ const AMENITIES = [
 interface TerrainData {
   id: string;
   name: string;
-  type: '6vs6' | '7vs7';
+  type: '6v6' | '7v7';
   amenities: string[];
   photos: string[];
+  photoFiles: File[];
 }
 
 export default function ManagerOnboarding() {
   const navigate = useNavigate();
+  const toast = useToast();
+  const { refreshProfile } = useAuth();
   const [currentStep, setCurrentStep] = React.useState<Step>(1);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [uploadStatus, setUploadStatus] = React.useState('');
 
   // Form State
   const [formData, setFormData] = React.useState({
     fullName: '',
-    phone: '55 123 456', // Mock pre-filled from OTP
+    phone: '', // Will be filled from auth
     governorate: '',
     city: '',
     complexName: '',
@@ -70,9 +77,19 @@ export default function ManagerOnboarding() {
     openingTime: '09:00',
     closingTime: '23:00',
     description: '',
-    terrains: [{ id: '1', name: 'Terrain 1', type: '6vs6', amenities: [], photos: [] }] as TerrainData[],
+    terrains: [{ id: '1', name: 'Terrain 1', type: '6v6', amenities: [], photos: [], photoFiles: [] }] as TerrainData[],
     termsAccepted: false
   });
+
+  React.useEffect(() => {
+    if (auth.currentUser) {
+      setFormData(prev => ({
+        ...prev,
+        phone: auth.currentUser?.phoneNumber || '',
+        fullName: auth.currentUser?.displayName || ''
+      }));
+    }
+  }, []);
 
   const nextStep = () => setCurrentStep((prev) => (typeof prev === 'number' ? (prev + 1 as Step) : prev));
   const prevStep = () => setCurrentStep((prev) => (typeof prev === 'number' ? (prev - 1 as Step) : prev));
@@ -81,7 +98,7 @@ export default function ManagerOnboarding() {
     const newId = (formData.terrains.length + 1).toString();
     setFormData(prev => ({
       ...prev,
-      terrains: [...prev.terrains, { id: newId, name: `Terrain ${newId}`, type: '6vs6', amenities: [], photos: [] }]
+      terrains: [...prev.terrains, { id: newId, name: `Terrain ${newId}`, type: '6v6', amenities: [], photos: [], photoFiles: [] }]
     }));
   };
 
@@ -100,56 +117,106 @@ export default function ManagerOnboarding() {
   };
 
   const handleSubmit = async () => {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser) {
+      toast("Vous devez être connecté", "error");
+      return;
+    }
+    
     setIsLoading(true);
+    const managerId = auth.currentUser.uid;
+    
     try {
-      // 1. Create Complex
+      // 1. Upload Photos
+      let totalFiles = 0;
+      formData.terrains.forEach(t => totalFiles += t.photoFiles.length);
+      
+      let uploadedCount = 0;
+      const updatedTerrains = [...formData.terrains];
+
+      for (let i = 0; i < updatedTerrains.length; i++) {
+        const terrain = updatedTerrains[i];
+        const photoUrls: string[] = [];
+        
+        for (let j = 0; j < terrain.photoFiles.length; j++) {
+          const file = terrain.photoFiles[j];
+          setUploadStatus(`Upload des photos en cours... ${uploadedCount + 1}/${totalFiles}`);
+          
+          const storagePath = `complexes/${managerId}/terrain-${i}/${file.name}`;
+          const fileRef = ref(storage, storagePath);
+          await uploadBytes(fileRef, file);
+          const downloadUrl = await getDownloadURL(fileRef);
+          photoUrls.push(downloadUrl);
+          
+          uploadedCount++;
+        }
+        updatedTerrains[i] = { ...terrain, photos: photoUrls };
+      }
+
+      setUploadStatus('Finalisation du profil...');
+
+      // 2. Create Complex
       const complexRef = await addDoc(collection(db, 'complexes'), {
         name: formData.complexName,
         address: formData.address,
         governorate: formData.governorate,
         city: formData.city,
-        lat: parseFloat(formData.lat),
-        lng: parseFloat(formData.lng),
+        lat: formData.lat ? parseFloat(formData.lat) : 0,
+        lng: formData.lng ? parseFloat(formData.lng) : 0,
         openingTime: formData.openingTime,
         closingTime: formData.closingTime,
         description: formData.description,
-        managerId: auth.currentUser.uid,
-        amenities: [], // Can be aggregated from terrains
+        managerId: managerId,
+        amenities: Array.from(new Set(updatedTerrains.flatMap(t => t.amenities))),
         rating: 0,
         reviewsCount: 0,
-        photos: [], // In real app, upload files first
+        photos: updatedTerrains.flatMap(t => t.photos).slice(0, 5), // Main complex photos
+        isVerified: false,
+        isActive: true,
         createdAt: serverTimestamp()
       });
 
-      // 2. Create Terrains
-      for (const t of formData.terrains) {
+      // 3. Create Terrains
+      for (const t of updatedTerrains) {
         await addDoc(collection(db, 'terrains'), {
           name: t.name,
           complexId: complexRef.id,
           complexName: formData.complexName,
+          managerId: managerId,
           type: t.type,
           amenities: t.amenities,
-          photos: [], // In real app, upload files
+          photos: t.photos,
           pricePerHour: 80, // Default price
           available: true,
           createdAt: serverTimestamp()
         });
       }
 
-      // 3. Update User Role
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+      // 4. Update User Role
+      await updateDoc(doc(db, 'users', managerId), {
         role: 'manager',
         complexId: complexRef.id,
-        onboardingCompleted: true
+        onboardingCompleted: true,
+        fullName: formData.fullName,
+        city: formData.city
       });
 
+      await refreshProfile();
       trackManagerSignup();
+      
       setCurrentStep('SUCCESS');
-    } catch (err) {
+      
+      // Redirect after 2 seconds
+      setTimeout(() => {
+        toast("Bienvenue dans votre tableau de bord ! Votre complexe sera vérifié dans 24-48h.", "success");
+        navigate('/dashboard');
+      }, 2000);
+
+    } catch (err: any) {
       console.error("Error submitting onboarding:", err);
+      toast(`Erreur: ${err.message || "Une erreur est survenue"}`, "error");
     } finally {
       setIsLoading(false);
+      setUploadStatus('');
     }
   };
 
@@ -403,14 +470,14 @@ export default function ManagerOnboarding() {
                                 <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Type de terrain</label>
                                 <div className="flex bg-background-secondary p-1 rounded-xl border border-border-subtle">
                                    <button 
-                                     onClick={() => updateTerrain(index, { type: '6vs6' })}
-                                     className={cn("flex-1 h-10 rounded-lg text-[9px] font-black uppercase transition-all", terrain.type === '6vs6' ? 'bg-accent-green text-black' : 'text-text-tertiary')}
+                                     onClick={() => updateTerrain(index, { type: '6v6' })}
+                                     className={cn("flex-1 h-10 rounded-lg text-[9px] font-black uppercase transition-all", terrain.type === '6v6' ? 'bg-accent-green text-black' : 'text-text-tertiary')}
                                    >
                                      6 VS 6
                                    </button>
                                    <button 
-                                     onClick={() => updateTerrain(index, { type: '7vs7' })}
-                                     className={cn("flex-1 h-10 rounded-lg text-[9px] font-black uppercase transition-all", terrain.type === '7vs7' ? 'bg-accent-green text-black' : 'text-text-tertiary')}
+                                     onClick={() => updateTerrain(index, { type: '7v7' })}
+                                     className={cn("flex-1 h-10 rounded-lg text-[9px] font-black uppercase transition-all", terrain.type === '7v7' ? 'bg-accent-green text-black' : 'text-text-tertiary')}
                                    >
                                      7 VS 7
                                    </button>
@@ -444,13 +511,54 @@ export default function ManagerOnboarding() {
                           </div>
 
                           <div className="space-y-4">
-                             <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Photos du terrain (Max 6)</label>
-                             <div className="w-full border-2 border-dashed border-border-subtle rounded-[24px] p-8 flex flex-col items-center gap-4 hover:border-accent-green transition-colors cursor-pointer bg-background-secondary/20">
-                                <UploadCloud className="text-accent-green" size={32} />
-                                <div className="text-center space-y-1">
-                                   <p className="text-xs font-bold uppercase tracking-widest">Glisse tes photos ici</p>
-                                   <p className="font-medium text-[10px] text-text-tertiary">OU CLIQUE POUR CHOISIR</p>
+                             <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary font-bold">Photos du terrain ({terrain.photoFiles.length}/6)</label>
+                             <div className="space-y-4">
+                                <div 
+                                  onClick={() => document.getElementById(`photo-input-${index}`)?.click()}
+                                  className="w-full border-2 border-dashed border-border-subtle rounded-[24px] p-8 flex flex-col items-center gap-4 hover:border-accent-green transition-colors cursor-pointer bg-background-secondary/20"
+                                >
+                                   <input 
+                                     id={`photo-input-${index}`}
+                                     type="file" 
+                                     multiple 
+                                     accept="image/*"
+                                     className="hidden"
+                                     onChange={(e) => {
+                                       const files = Array.from(e.target.files || []);
+                                       updateTerrain(index, { photoFiles: [...terrain.photoFiles, ...files].slice(0, 6) });
+                                     }}
+                                   />
+                                   <UploadCloud className="text-accent-green" size={32} />
+                                   <div className="text-center space-y-1">
+                                      <p className="text-xs font-bold uppercase tracking-widest">Glisse tes photos ici</p>
+                                      <p className="font-medium text-[10px] text-text-tertiary">OU CLIQUE POUR CHOISIR</p>
+                                   </div>
                                 </div>
+
+                                {terrain.photoFiles.length > 0 && (
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {terrain.photoFiles.map((file, fIndex) => (
+                                      <div key={fIndex} className="relative aspect-video bg-background-secondary rounded-lg overflow-hidden border border-border-subtle group">
+                                        <div className="w-full h-full flex items-center justify-center p-2 text-center">
+                                          <FileText size={16} className="text-text-tertiary mb-1" />
+                                          <span className="text-[8px] font-bold text-text-tertiary truncate block w-full">{file.name}</span>
+                                        </div>
+                                        <button 
+                                          title="Supprimer"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const newFiles = [...terrain.photoFiles];
+                                            newFiles.splice(fIndex, 1);
+                                            updateTerrain(index, { photoFiles: newFiles });
+                                          }}
+                                          className="absolute top-1 right-1 bg-danger text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                          <Minus size={10} />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                              </div>
                           </div>
                        </Card>
@@ -520,9 +628,17 @@ export default function ManagerOnboarding() {
               <Button 
                 onClick={handleSubmit} 
                 disabled={!formData.termsAccepted || isLoading}
-                className="w-full h-16 font-black uppercase tracking-widest shadow-2xl shadow-accent-green/20"
+                className={cn(
+                  "w-full h-16 font-black uppercase tracking-widest shadow-2xl shadow-accent-green/20 flex flex-col justify-center items-center gap-1",
+                  isLoading && "cursor-not-allowed opacity-80"
+                )}
               >
-                {isLoading ? <Loader2 className="animate-spin" /> : "Envoyer ma demande"}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    {uploadStatus && <span className="text-[10px] font-bold animate-pulse">{uploadStatus}</span>}
+                  </>
+                ) : "Envoyer ma demande"}
               </Button>
             </motion.div>
           )}

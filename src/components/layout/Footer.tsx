@@ -18,12 +18,12 @@ export const Footer = () => {
           <h4 className="text-sm font-bold uppercase tracking-wider mb-6 text-pl-purple">Navigation</h4>
           <ul className="space-y-4 text-text-secondary text-sm">
             <li><NavLink to="/terrains" className="hover:text-pl-purple transition-colors">Nos Terrains</NavLink></li>
-            <li><NavLink to="/matches" className="hover:text-pl-purple transition-colors">Matchs Ouverts</NavLink></li>
             <li><NavLink to="/blog" className="hover:text-pl-purple transition-colors">Blog</NavLink></li>
-            <li><NavLink to="/inscription-gerant" className="hover:text-pl-purple transition-colors">Enregistrer un Complexe</NavLink></li>
-            <li><NavLink to="/tournaments" className="hover:text-pl-purple transition-colors">Tournois</NavLink></li>
-            <li><NavLink to="/academies" className="hover:text-pl-purple transition-colors">Académies</NavLink></li>
+            <li><NavLink to="/#comment-ca-marche" className="hover:text-pl-purple transition-colors">Comment ça marche</NavLink></li>
             <li><NavLink to="/a-propos" className="hover:text-pl-purple transition-colors">À Propos</NavLink></li>
+            <li><NavLink to="/inscription-gerant" className="hover:text-pl-purple transition-colors">Enregistrer un Complexe</NavLink></li>
+            <li><NavLink to="/dashboard" className="hover:text-pl-purple transition-colors">Tableau de bord</NavLink></li>
+            <li><NavLink to="/dashboard/academies" className="hover:text-pl-purple transition-colors">Gérer mon académie</NavLink></li>
           </ul>
         </div>
 
@@ -31,9 +31,10 @@ export const Footer = () => {
           <h4 className="text-sm font-bold uppercase tracking-wider mb-6 text-pl-purple">Support</h4>
           <ul className="space-y-4 text-text-secondary text-sm">
             <li><NavLink to="/aide" className="hover:text-pl-purple transition-colors">Centre d'aide</NavLink></li>
-            <li><NavLink to="/terms" className="hover:text-pl-purple transition-colors">Conditions d'utilisation</NavLink></li>
-            <li><NavLink to="/privacy" className="hover:text-pl-purple transition-colors">Politique de confidentialité</NavLink></li>
             <li><NavLink to="/contact" className="hover:text-pl-purple transition-colors">Contact</NavLink></li>
+            <li><NavLink to="/privacy" className="hover:text-pl-purple transition-colors">Politique de confidentialité</NavLink></li>
+            <li><NavLink to="/terms" className="hover:text-pl-purple transition-colors">CGU</NavLink></li>
+            <li><NavLink to="/cookies" className="hover:text-pl-purple transition-colors">Politique cookies</NavLink></li>
           </ul>
         </div>
 
@@ -54,9 +55,9 @@ export const Footer = () => {
       <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-border-subtle flex flex-col md:flex-row justify-between items-center gap-4">
         <p className="text-text-secondary text-xs">© 2026 Takwira.com. Tous droits réservés.</p>
         <div className="flex gap-6">
-          <a href="#" className="text-text-secondary hover:text-pl-purple text-xs transition-colors font-bold uppercase tracking-widest">Instagram</a>
-          <a href="#" className="text-text-secondary hover:text-pl-purple text-xs transition-colors font-bold uppercase tracking-widest">Facebook</a>
-          <a href="#" className="text-text-secondary hover:text-pl-purple text-xs transition-colors font-bold uppercase tracking-widest">TikTok</a>
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-pl-purple text-xs transition-colors font-bold uppercase tracking-widest">Instagram</a>
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-pl-purple text-xs transition-colors font-bold uppercase tracking-widest">Facebook</a>
+          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-pl-purple text-xs transition-colors font-bold uppercase tracking-widest">Twitter</a>
         </div>
       </div>
     </footer>

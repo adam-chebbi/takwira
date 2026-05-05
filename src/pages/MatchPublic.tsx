@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   MapPin, 
@@ -17,15 +17,21 @@ import {
   AlertCircle,
   ExternalLink,
   ChevronRight,
-  Euro
+  Euro,
+  Settings,
+  Info
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { Badge } from '@/src/components/ui/Badge';
+import { Skeleton } from '@/src/components/ui/Skeleton';
+import { useToast } from '@/src/components/ui/Toast';
 import { cn } from '@/src/lib/utils';
+import { format, parseISO } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
-// --- Utility: Deterministic Color ---
+// --- Helpers ---
 const AVATAR_COLORS = [
   'bg-blue-500',
   'bg-purple-500',
@@ -45,44 +51,8 @@ const getAvatarColor = (name: string) => {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 };
 
-// --- Mock Data ---
-interface Player {
-  id: string;
-  name: string;
-  joinedAt: string;
-}
-
-const INITIAL_PLAYERS: Player[] = [
-  { id: '1', name: 'Ahmed', joinedAt: '2026-05-01T10:00:00Z' },
-  { id: '2', name: 'Sami', joinedAt: '2026-05-01T10:05:00Z' },
-  { id: '3', name: 'Yassine', joinedAt: '2026-05-01T10:10:00Z' },
-  { id: '4', name: 'Mehdi', joinedAt: '2026-05-01T10:15:00Z' },
-  { id: '5', name: 'Karim', joinedAt: '2026-05-01T11:00:00Z' },
-  { id: '6', name: 'Omar', joinedAt: '2026-05-01T11:05:00Z' },
-  { id: '7', name: 'Skander', joinedAt: '2026-05-01T11:10:00Z' },
-  { id: '8', name: 'Adel', joinedAt: '2026-05-01T11:15:00Z' },
-];
-
-const MOCK_MATCH = {
-  title: "Match du Mercredi soir",
-  terrainName: "Terrain 1 · Gammarth Foot Center",
-  complexName: "Gammarth Foot Center",
-  address: "Av. Habib Bourguiba, Gammarth 2070, Tunis",
-  date: "2026-05-22T19:00:00Z",
-  endDate: "2026-05-22T20:00:00Z",
-  format: "6 vs 6",
-  maxPlayers: 12,
-  price: 20,
-  organizer: {
-    name: "Ahmed S.",
-    whatsappEnabled: true
-  },
-  status: 'pending' as 'confirmed' | 'pending' | 'cancelled',
-  teamsPublished: true,
-  teams: {
-    a: ['Ahmed', 'Sami', 'Yassine', 'Mehdi'],
-    b: ['Karim', 'Omar', 'Skander', 'Adel']
-  }
+const getInitials = (name: string) => {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 };
 
 // --- Countdown component ---
@@ -130,19 +100,36 @@ import MatchChat from '@/src/components/match/MatchChat';
 
 export default function MatchPublic() {
   const { token } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const toast = useToast();
   const { user, userProfile } = useAuth();
-  const { match, players: dbPlayers, isLoading: matchLoading, joinMatch } = useMatch(token);
+  const { match, players, isLoading: matchLoading, joinMatch } = useMatch(token);
+  
   const [isCheckInOpen, setIsCheckInOpen] = React.useState(false);
-  const [hasJoined, setHasJoined] = React.useState(false);
   const [userName, setUserName] = React.useState(userProfile?.name || '');
   const [userPhone, setUserPhone] = React.useState(userProfile?.phone || '');
   const [isJoining, setIsJoining] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
+  const [showSuccessBanner, setShowSuccessBanner] = React.useState(location.state?.justCreated === true);
+  
+  // Persisted player name for anonymous/recurring visitors
+  const sessionKey = `takwira_checkin_${token}`;
+  const [persistedPlayerName, setPersistedPlayerName] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(sessionKey) || '';
+    }
+    return '';
+  });
 
   const matchUrl = typeof window !== 'undefined' ? window.location.href : `takwira.com/match/${token}`;
 
-  // Use DB players if available, fallback to mock for demo if match not in DB
-  const displayPlayers = dbPlayers.length > 0 ? dbPlayers : INITIAL_PLAYERS;
+  const hasCheckedIn = React.useMemo(() => {
+    if (!players) return false;
+    const byId = user ? players.some(p => p.userId === user.uid) : false;
+    const byName = persistedPlayerName ? players.some(p => p.playerName === persistedPlayerName) : false;
+    return byId || byName;
+  }, [players, user, persistedPlayerName]);
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,17 +137,17 @@ export default function MatchPublic() {
 
     setIsJoining(true);
     try {
-      if (match) {
-        await joinMatch(user?.uid, userName, userPhone);
-      } else {
-        // Fallback for demo/mock
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+      await joinMatch(userName, userPhone, user?.uid);
+      
+      sessionStorage.setItem(sessionKey, userName);
+      setPersistedPlayerName(userName);
+      
       trackCheckin();
-      setHasJoined(true);
+      toast(`✅ Tu es dans le match, ${userName} !`, 'success');
       setIsCheckInOpen(false);
     } catch (err) {
       console.error("Join error:", err);
+      toast("Impossible de rejoindre le match. Réessaie plus tard.", 'error');
     } finally {
       setIsJoining(false);
     }
@@ -178,17 +165,89 @@ export default function MatchPublic() {
 
   if (matchLoading) {
     return (
-      <div className="min-h-screen bg-background-primary flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-accent-green animate-spin" />
+      <div className="min-h-screen bg-background-primary pt-20">
+        <div className="bg-background-card border-b border-border-subtle py-12">
+          <div className="max-w-5xl mx-auto px-4 md:px-8 space-y-6">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-24 w-full md:w-2/3" />
+            <div className="flex gap-4">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-6 w-32" />
+            </div>
+          </div>
+        </div>
+        <div className="max-w-5xl mx-auto px-4 md:px-8 mt-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            <div className="lg:col-span-2 space-y-12">
+              <div className="space-y-8">
+                <Skeleton className="h-10 w-48" />
+                <div className="grid grid-cols-4 md:grid-cols-6 gap-8">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="flex flex-col items-center gap-2">
+                       <Skeleton className="w-16 h-16 rounded-full" />
+                       <Skeleton className="h-3 w-12" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <Skeleton className="h-48 w-full rounded-3xl" />
+            </div>
+            <div className="space-y-8">
+              <Skeleton className="h-[400px] w-full rounded-2xl" />
+              <Skeleton className="h-48 w-full rounded-2xl" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const effectiveMatchId = match?.id || token || 'demo';
+  if (!match) {
+    return (
+      <div className="min-h-screen bg-background-primary flex flex-col items-center justify-center p-4">
+        <div className="text-center space-y-6 max-w-md">
+           <div className="w-24 h-24 bg-background-secondary rounded-full flex items-center justify-center mx-auto text-text-tertiary">
+              <AlertCircle size={48} />
+           </div>
+           <div className="space-y-2">
+              <h1 className="text-3xl font-display font-black uppercase">Match introuvable</h1>
+              <p className="text-text-secondary">Ce lien de match n'est pas valide ou a expiré.</p>
+           </div>
+           <Button onClick={() => navigate('/')} className="w-full h-14 font-bold uppercase tracking-widest">
+             Retour à l'accueil
+           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const effectiveMatchId = match.id;
+  const isOrganizer = user?.uid === match.organizerId;
 
   return (
-    <div className="min-h-screen bg-background-primary flex">
-      <div className="flex-1 pt-20 pb-32 overflow-y-auto">
+    <div className="min-h-screen bg-background-primary flex flex-col relative">
+      <AnimatePresence>
+        {showSuccessBanner && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-accent-green text-black py-3 px-4 relative z-[100]"
+          >
+            <div className="max-w-5xl mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-2 font-black uppercase text-[10px] tracking-widest">
+                <Check size={16} strokeWidth={3} />
+                <span>Réservation envoyée ! Le gérant va confirmer votre créneau.</span>
+              </div>
+              <button onClick={() => setShowSuccessBanner(false)} className="hover:opacity-60">
+                <X size={16} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex-1 pb-32 overflow-y-auto">
         {/* Hero Section */}
       <section className="bg-background-card border-b border-border-subtle py-8 md:py-12 overflow-hidden relative">
         <div className="max-w-5xl mx-auto px-4 md:px-8">
@@ -200,34 +259,41 @@ export default function MatchPublic() {
 
           <div className="flex flex-col gap-8">
             <div className="space-y-4">
-              <h1 className="text-4xl md:text-7xl font-display font-black uppercase tracking-tighter leading-[0.9] text-text-primary">
-                {MOCK_MATCH.title || "Match de Football"}
-              </h1>
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <h1 className="text-4xl md:text-7xl font-display font-black uppercase tracking-tighter leading-[0.9] text-text-primary">
+                  {match.title || "Match de Football"}
+                </h1>
+                
+                {isOrganizer && (
+                  <Button 
+                    variant="primary" 
+                    className="gap-2 h-12 px-6 font-bold uppercase tracking-widest text-xs shadow-xl"
+                    onClick={() => navigate(`/match/${token}/manage`)}
+                  >
+                    <Settings size={18} /> Gérer le match
+                  </Button>
+                )}
+              </div>
               
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-2 text-text-secondary font-medium px-1">
                   <MapPin size={18} className="text-accent-green" />
-                  <span className="text-sm md:text-base">{MOCK_MATCH.terrainName}</span>
+                  <span className="text-sm md:text-base">{match.terrainName} · {match.complexName}</span>
                 </div>
                 
                 <AnimatePresence mode="wait">
-                  {MOCK_MATCH.status === 'confirmed' && (
+                  {match.status === 'confirmed' ? (
                     <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-accent-green/10 text-accent-green border border-accent-green/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
                        ✓ Terrain Confirmé
                     </motion.div>
-                  )}
-                  {MOCK_MATCH.status === 'pending' && (
+                  ) : (
                     <motion.div 
+                      key="pending"
                       animate={{ opacity: [1, 0.5, 1] }} 
                       transition={{ duration: 2, repeat: Infinity }}
                       className="bg-warning/10 text-warning border border-warning/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"
                     >
                        ⏳ En attente de confirmation
-                    </motion.div>
-                  )}
-                  {MOCK_MATCH.status === 'cancelled' && (
-                    <motion.div className="bg-danger/10 text-danger border border-danger/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                       ✗ Annulé
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -239,9 +305,15 @@ export default function MatchPublic() {
                <div className="absolute top-0 right-0 w-64 h-64 bg-accent-green/5 blur-3xl rounded-full -mr-20 -mt-20 group-hover:bg-accent-green/10 transition-colors" />
                
                <div className="flex flex-col items-center md:items-start gap-1">
-                  <span className="text-xl md:text-2xl font-display font-extrabold text-accent-green uppercase tracking-tighter">MERCREDI</span>
-                  <span className="text-7xl md:text-9xl font-display font-black leading-none tracking-tighter">22</span>
-                  <span className="text-xl md:text-2xl font-display font-extrabold uppercase tracking-tighter">MAI 2026</span>
+                  <span className="text-xl md:text-2xl font-display font-extrabold text-accent-green uppercase tracking-tighter">
+                    {format(parseISO(match.date), 'EEEE', { locale: fr })}
+                  </span>
+                  <span className="text-7xl md:text-9xl font-display font-black leading-none tracking-tighter">
+                    {format(parseISO(match.date), 'dd')}
+                  </span>
+                  <span className="text-xl md:text-2xl font-display font-extrabold uppercase tracking-tighter">
+                    {format(parseISO(match.date), 'MMMM yyyy', { locale: fr })}
+                  </span>
                </div>
 
                <div className="h-px md:h-32 w-full md:w-px bg-border-subtle" />
@@ -249,11 +321,11 @@ export default function MatchPublic() {
                <div className="flex flex-col items-center md:items-end gap-1">
                   <span className="text-xl md:text-2xl font-display font-extrabold text-text-secondary uppercase tracking-tighter">COUP D'ENVOI</span>
                   <div className="flex items-center gap-4 text-4xl md:text-6xl font-display font-black tracking-tighter">
-                    <span>19h00</span>
+                    <span>{match.startTime}</span>
                     <span className="text-text-tertiary/30">—</span>
-                    <span>20h00</span>
+                    <span>{match.endTime || '20:00'}</span>
                   </div>
-                  <CountdownTimer targetDate={MOCK_MATCH.date} />
+                  <CountdownTimer targetDate={match.date} />
                </div>
             </div>
           </div>
@@ -273,8 +345,8 @@ export default function MatchPublic() {
                 <p className="text-xs text-text-secondary font-medium uppercase tracking-widest">Ils ont déjà pris leur place</p>
               </div>
               <div className="text-right">
-                <span className="text-4xl font-display font-black text-accent-green">{displayPlayers.length}</span>
-                <span className="text-xl font-display font-bold text-text-secondary"> / {MOCK_MATCH.maxPlayers}</span>
+                <span className="text-4xl font-display font-black text-accent-green">{players.length}</span>
+                <span className="text-xl font-display font-bold text-text-secondary"> / {match.maxPlayers}</span>
               </div>
             </div>
 
@@ -282,7 +354,7 @@ export default function MatchPublic() {
             <div className="w-full h-3 bg-background-secondary rounded-full overflow-hidden border border-border-subtle">
               <motion.div 
                 initial={{ width: 0 }}
-                animate={{ width: `${(displayPlayers.length / MOCK_MATCH.maxPlayers) * 100}%` }}
+                animate={{ width: `${(players.length / match.maxPlayers) * 100}%` }}
                 transition={{ duration: 0.8, ease: "circOut" }}
                 className="h-full bg-accent-green shadow-[0_0_15px_rgba(0,255,135,0.4)]"
               />
@@ -290,7 +362,7 @@ export default function MatchPublic() {
 
             {/* Player Grid */}
             <div className="grid grid-cols-4 md:grid-cols-6 gap-y-10 gap-x-6">
-              {displayPlayers.map((player) => (
+              {players.map((player) => (
                 <motion.div 
                   key={player.id}
                   initial={{ scale: 0, opacity: 0 }}
@@ -300,16 +372,16 @@ export default function MatchPublic() {
                 >
                   <div className={cn(
                     "w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-white font-display font-bold text-lg md:text-xl border-4 border-background-primary shadow-xl",
-                    getAvatarColor(player.name)
+                    getAvatarColor(player.playerName)
                   )}>
-                    {getInitials(player.name)}
+                    {getInitials(player.playerName)}
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-center max-w-full truncate">{player.name}</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-center max-w-full truncate">{player.playerName}</span>
                 </motion.div>
               ))}
               
               {/* Empty Spots */}
-              {Array.from({ length: MOCK_MATCH.maxPlayers - displayPlayers.length }).map((_, i) => (
+              {Array.from({ length: Math.max(0, match.maxPlayers - players.length) }).map((_, i) => (
                 <div key={`empty-${i}`} className="flex flex-col items-center gap-3 animate-pulse">
                   <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-dashed border-border-subtle flex items-center justify-center text-text-tertiary">
                     <span className="font-display font-bold text-xl">?</span>
@@ -322,7 +394,7 @@ export default function MatchPublic() {
 
           {/* Check-in Section */}
           <section>
-            {!hasJoined ? (
+            {!hasCheckedIn ? (
               <Card className="p-8 md:p-12 border-2 border-accent-green/30 relative overflow-hidden group">
                  <div className="absolute inset-0 bg-accent-green/[0.03] pointer-events-none" />
                  <div className="flex flex-col items-center text-center space-y-6 relative">
@@ -348,22 +420,20 @@ export default function MatchPublic() {
                        </div>
                        <div>
                           <h3 className="text-2xl font-display font-black uppercase">Tu es dans le match !</h3>
-                          <p className="text-text-secondary font-medium">À mercredi {userName || "l'ami"} ! Prépare tes crampons.</p>
+                          <p className="text-text-secondary font-medium">À bientôt sur le terrain l'ami ! Prépare tes crampons.</p>
                        </div>
                     </div>
-                    <button 
-                      onClick={() => setHasJoined(false)}
-                      className="text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-danger hover:underline"
-                    >
-                      Je ne pourrai pas jouer
-                    </button>
+                    <div className="flex items-center gap-2 text-accent-green">
+                      <Info size={14} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Présence confirmée</span>
+                    </div>
                  </div>
               </Card>
             )}
           </section>
 
           {/* Teams Section */}
-          {MOCK_MATCH.teamsPublished && (
+          {match.teamsPublished && (
             <section className="space-y-10">
               <div className="flex items-center gap-4">
                 <h2 className="text-2xl md:text-3xl font-display font-black uppercase tracking-tight">Les Équipes</h2>
@@ -375,7 +445,7 @@ export default function MatchPublic() {
                 <div className="space-y-6">
                   <Badge className="bg-accent-green text-black font-black uppercase tracking-[0.2em] w-full justify-center h-10 text-sm">Équipe A</Badge>
                   <div className="space-y-3">
-                    {MOCK_MATCH.teams.a.map((p, i) => (
+                    {match.teamA?.map((p, i) => (
                       <motion.div 
                         key={p} 
                         initial={{ x: -20, opacity: 0 }}
@@ -410,7 +480,7 @@ export default function MatchPublic() {
                 <div className="space-y-6">
                    <Badge className="bg-background-secondary text-text-secondary border border-border-subtle font-black uppercase tracking-[0.2em] w-full justify-center h-10 text-sm">Équipe B</Badge>
                    <div className="space-y-3">
-                    {MOCK_MATCH.teams.b.map((p, i) => (
+                    {match.teamB?.map((p, i) => (
                       <motion.div 
                         key={p} 
                         initial={{ x: 20, opacity: 0 }}
@@ -447,14 +517,14 @@ export default function MatchPublic() {
                    <div className="flex items-start gap-3">
                       <MapPin size={18} className="text-accent-green shrink-0 mt-1" />
                       <div className="space-y-1">
-                         <p className="font-bold uppercase tracking-wider text-sm leading-tight">{MOCK_MATCH.complexName}</p>
-                         <p className="text-[10px] text-text-secondary leading-tight">{MOCK_MATCH.address}</p>
+                         <p className="font-bold uppercase tracking-wider text-sm leading-tight">{match.complexName}</p>
+                         <p className="text-[10px] text-text-secondary leading-tight">{match.terrainName}</p>
                       </div>
                    </div>
                    <Button 
                       variant="outline" 
                       className="w-full h-10 gap-2 border-border-subtle hover:border-accent-green"
-                      onClick={() => window.open(`https://www.openstreetmap.org/search?query=${encodeURIComponent(MOCK_MATCH.address)}`, '_blank')}
+                      onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.complexName || '')}`, '_blank')}
                    >
                      <ExternalLink size={14} /> Voir l'itinéraire
                    </Button>
@@ -466,13 +536,13 @@ export default function MatchPublic() {
                    <div className="space-y-1">
                       <span className="text-[8px] uppercase font-bold text-text-tertiary tracking-widest block">Format</span>
                       <div className="flex items-center gap-1.5 font-bold uppercase text-xs tracking-wider">
-                         <Users size={14} className="text-accent-green" /> {MOCK_MATCH.format}
+                         <Users size={14} className="text-accent-green" /> {match.format}
                       </div>
                    </div>
                    <div className="space-y-1">
-                      <span className="text-[8px] uppercase font-bold text-text-tertiary tracking-widest block">Prix</span>
+                      <span className="text-[8px] uppercase font-bold text-text-tertiary tracking-widest block">Prix / pers</span>
                       <div className="flex items-center gap-1.5 font-bold uppercase text-xs tracking-wider text-accent-green">
-                         <Euro size={14} /> {MOCK_MATCH.price} DT
+                         <Euro size={14} /> 20 DT
                       </div>
                    </div>
                 </div>
@@ -486,14 +556,15 @@ export default function MatchPublic() {
                       </div>
                       <div className="flex-1 min-w-0">
                          <p className="text-[8px] uppercase font-bold text-text-tertiary tracking-widest">Organisé par</p>
-                         <p className="text-sm font-bold uppercase tracking-wider truncate">{MOCK_MATCH.organizer.name}</p>
+                         <p className="text-sm font-bold uppercase tracking-wider truncate">{match.organizerName}</p>
                       </div>
                    </div>
-                   {MOCK_MATCH.organizer.whatsappEnabled && (
-                      <Button className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white border-none gap-2 font-bold h-12 uppercase tracking-widest text-xs">
-                         <MessageCircle size={18} /> WhatsApp
-                      </Button>
-                   )}
+                   <Button 
+                    className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white border-none gap-2 font-bold h-12 uppercase tracking-widest text-xs"
+                    onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent("Salut, je te contacte pour le match de foot du " + match.date)}`, '_blank')}
+                   >
+                      <MessageCircle size={18} /> Contacter l'organisateur
+                   </Button>
                 </div>
              </div>
           </Card>
@@ -520,7 +591,7 @@ export default function MatchPublic() {
                  <Share2 size={20} /> Partager sur WhatsApp
                </Button>
 
-               <div className="flex flex-col items-center gap-4 pt-4 border-t border-border-subtle">
+               <div className="flex flex-col items-center gap-4 pt-4 border-t border-border-subtle text-center">
                   <div className="p-4 bg-white rounded-2xl shadow-xl">
                     <QRCodeSVG 
                       value={matchUrl} 
@@ -529,7 +600,7 @@ export default function MatchPublic() {
                       includeMargin={false}
                     />
                   </div>
-                  <p className="text-[8px] uppercase font-bold text-text-tertiary tracking-[0.2em] text-center">Scannez le code pour rejoindre</p>
+                  <p className="text-[8px] uppercase font-bold text-text-tertiary tracking-[0.2em]">Scanner pour rejoindre</p>
                </div>
             </div>
           </Card>
@@ -617,7 +688,9 @@ export default function MatchPublic() {
       <MatchChat 
         matchId={effectiveMatchId} 
         currentUser={user} 
-        userProfile={userProfile} 
+        userProfile={userProfile}
+        currentPlayerName={persistedPlayerName}
+        isOrganizer={isOrganizer}
       />
 
       <style>{`

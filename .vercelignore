@@ -1,0 +1,11 @@
+.env
+.env.local
+node_modules
+dist
+.git
+*.md
+!README.md
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx

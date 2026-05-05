@@ -1,106 +1,141 @@
 import * as React from 'react';
-import { useBlog } from '@/src/hooks/useBlog';
+import { useBlogPosts } from '@/src/hooks/useBlogPosts';
 import { BlogPostCard } from '@/src/components/blog/BlogPostCard';
 import { AdSlot } from '@/src/components/ads/AdSlot';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from '@/src/components/ui/Button';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, FileText, Search } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 
-const CATEGORIES = ["Tous", "Actualités", "Conseils", "Terrains", "Interviews", "Communauté"];
+const CATEGORIES = [
+  { label: "Tous", value: "" },
+  { label: "Actualités", value: "News" },
+  { label: "Conseils", value: "Tips" },
+  { label: "Terrains", value: "Event" },
+  { label: "Interviews", value: "Academy" },
+  { label: "Communauté", value: "Community" }
+];
 
 export default function BlogList() {
-  const [selectedCategory, setSelectedCategory] = React.useState("Tous");
-  const { posts, loading, hasMore, loadMore } = useBlog({ 
-    category: selectedCategory === "Tous" ? undefined : selectedCategory,
-    pageSize: 9
-  });
+  const [selectedCategory, setSelectedCategory] = React.useState("");
+  const { posts, isLoading, hasMore, loadMore } = useBlogPosts(selectedCategory || undefined);
+
+  const SkeletonCard = () => (
+    <div className="bg-background-card border border-border-subtle rounded-[24px] overflow-hidden p-6 space-y-4 animate-pulse">
+      <div className="aspect-[16/9] bg-background-secondary rounded-xl" />
+      <div className="h-8 bg-background-secondary rounded-lg w-3/4" />
+      <div className="space-y-2">
+        <div className="h-4 bg-background-secondary rounded w-full" />
+        <div className="h-4 bg-background-secondary rounded w-5/6" />
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex-grow bg-background-primary pt-32 pb-24">
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         {/* Header Section */}
         <div className="text-center mb-16 space-y-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="inline-block px-4 py-1.5 rounded-full bg-accent-green/10 border border-accent-green/20 text-accent-green text-[10px] font-black uppercase tracking-[0.2em] mb-4"
+          >
+            Le Mag Takwira
+          </motion.div>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-[clamp(48px,10vw,120px)] font-display font-extrabold uppercase leading-[0.85] tracking-tighter"
+            className="text-5xl md:text-8xl font-display font-black uppercase leading-[0.85] tracking-tighter text-text-primary"
           >
-            <span className="text-pl-purple uppercase">LE BLOG</span> <br />
-            <span className="text-pl-purple uppercase">TAKWIRA</span>
-            <span className="text-pl-pink">.</span>
+            Actualités <br />
+            <span className="text-accent-green">Foot Amateur</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-text-secondary text-lg md:text-xl font-medium max-w-2xl mx-auto"
+            className="text-text-secondary text-lg md:text-xl font-medium max-w-2xl mx-auto uppercase tracking-wide"
           >
-            Actualités, conseils et vie du football amateur en Tunisie.
+            Découvre les meilleurs conseils, terrains et interviews.
           </motion.p>
         </div>
 
         {/* Category Filters */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-16">
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-16">
           {CATEGORIES.map((cat) => (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              key={cat.label}
+              onClick={() => setSelectedCategory(cat.value)}
               className={cn(
-                "h-10 px-6 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border",
-                selectedCategory === cat
-                  ? "bg-pl-purple text-white border-pl-purple shadow-pl"
-                  : "bg-white text-text-muted hover:text-pl-purple border-border-subtle"
+                "h-12 px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
+                selectedCategory === cat.value
+                  ? "bg-accent-green text-black border-accent-green shadow-[0_10px_20px_rgba(34,197,94,0.3)] scale-105"
+                  : "bg-background-card text-text-tertiary hover:text-text-primary border-border-subtle hover:border-text-tertiary"
               )}
             >
-              {cat}
+              {cat.label}
             </button>
           ))}
         </div>
 
         {/* Main Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
-          <AnimatePresence mode="popLayout">
-            {posts.map((post, index) => (
-              <React.Fragment key={post.id}>
-                <BlogPostCard post={post} />
-                {index === 2 && (
-                  <div className="col-span-full py-8">
-                    <AdSlot position="blog_list_between" className="h-[90px]" />
-                  </div>
-                )}
-              </React.Fragment>
-            ))}
-          </AnimatePresence>
-        </div>
-
-        {/* Loading State / Load More */}
-        {loading && posts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 space-y-4">
-            <Loader2 size={48} className="text-pl-purple animate-spin" />
-            <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Chargement du terrain...</p>
+        {isLoading && posts.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
-        ) : posts.length === 0 ? (
-          <div className="text-center py-32 space-y-6">
-            <div className="w-20 h-20 bg-white border border-border-subtle rounded-3xl flex items-center justify-center text-text-muted mx-auto opacity-20 shadow-sm">
-              <Search size={40} />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-display font-extrabold uppercase tracking-tight text-pl-purple">Aucun article trouvé</h3>
-              <p className="text-text-secondary text-sm">Essaie de changer de catégorie ou reviens plus tard.</p>
-            </div>
+        ) : posts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
+            <AnimatePresence mode="popLayout">
+              {posts.map((post, index) => (
+                <React.Fragment key={post.id}>
+                  <BlogPostCard post={post} />
+                  {index === 5 && (
+                    <div className="col-span-full py-12">
+                      <AdSlot position="blog_list_between" className="bg-background-card rounded-[32px] border border-border-subtle p-8" />
+                    </div>
+                  )}
+                </React.Fragment>
+              ))}
+            </AnimatePresence>
           </div>
-        ) : null}
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-32 space-y-8 bg-background-card rounded-[48px] border border-border-subtle"
+          >
+            <div className="w-24 h-24 bg-background-secondary rounded-full flex items-center justify-center text-text-tertiary mx-auto shadow-inner">
+              <FileText size={48} />
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-3xl font-display font-black uppercase tracking-tight text-text-primary">Aucun article pour l'instant</h3>
+              <p className="text-text-secondary text-sm max-w-sm mx-auto">Revenez bientôt pour du contenu sur le football tunisien.</p>
+            </div>
+            <Button 
+                variant="outline" 
+                onClick={() => setSelectedCategory("")}
+                className="h-12 px-8 uppercase font-bold text-[10px] tracking-widest border-accent-green/30 text-accent-green"
+            >
+                Voir tous les articles
+            </Button>
+          </motion.div>
+        )}
 
-        {hasMore && !loading && (
+        {/* Load More */}
+        {hasMore && (
           <div className="mt-20 text-center">
             <Button 
               onClick={loadMore}
+              disabled={isLoading}
               variant="outline" 
-              className="h-14 px-12 border-pl-purple text-pl-purple text-[11px] font-bold uppercase tracking-widest hover:bg-pl-purple hover:text-white group"
+              className="h-16 px-12 border-2 border-border-subtle text-text-primary text-[11px] font-black uppercase tracking-widest hover:border-accent-green hover:text-accent-green group transition-all"
             >
-              Charger plus d'articles
-              <Loader2 className="ml-2 w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                "Charger plus d'articles"
+              )}
             </Button>
           </div>
         )}
@@ -108,3 +143,4 @@ export default function BlogList() {
     </div>
   );
 }
+

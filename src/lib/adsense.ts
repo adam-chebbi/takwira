@@ -1,6 +1,6 @@
 
 export function initAdSense() {
-  const publisherId = process.env.VITE_ADSENSE_PUBLISHER_ID;
+  const publisherId = import.meta.env.VITE_ADSENSE_PUBLISHER_ID;
   if (!publisherId || publisherId === 'ca-pub-XXXXXXXXXX') {
     console.warn('AdSense Publisher ID not configured');
     return;

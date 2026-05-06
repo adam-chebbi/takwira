@@ -696,7 +696,7 @@ export default function ManagerOnboarding() {
       </div>
 
       {/* Right Column: Visual Illustration */}
-      <div className="hidden lg:flex w-[45%] bg-background-secondary min-h-screen sticky top-0 flex-col items-center justify-center p-20 overflow-hidden">
+      <div className="hidden lg:flex w-[45%] bg-background-secondary min-h-screen sticky top-[120px] flex-col items-center justify-center p-20 overflow-hidden">
          {/* Background Elements */}
          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-accent-green/5 blur-[100px] rounded-full" />
          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent-green/5 blur-[120px] rounded-full" />

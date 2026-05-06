@@ -96,7 +96,7 @@ export default function BlogPostDetail() {
   };
 
   return (
-    <div className="flex-grow bg-background-primary pt-24 pb-32">
+    <div className="flex-grow bg-background-primary pb-32">
       <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8">
         <Link to="/blog" className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-accent-green transition-colors group">
           <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Retour au blog

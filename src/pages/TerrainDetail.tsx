@@ -169,7 +169,7 @@ export default function TerrainDetail() {
 
   if (isTerrainLoading || !terrain) {
     return (
-      <div className="min-h-screen pt-24 pb-32 md:pb-12 bg-background-primary overflow-x-hidden">
+      <div className="min-h-screen pb-32 md:pb-12 bg-background-primary overflow-x-hidden">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
           <div className="flex flex-col md:flex-row gap-8 items-start">
             <div className="w-full md:w-[60%] space-y-8">
@@ -197,7 +197,7 @@ export default function TerrainDetail() {
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-32 md:pb-12 bg-background-primary overflow-x-hidden">
+    <div className="min-h-screen pb-32 md:pb-12 bg-background-primary overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         <div className="flex flex-col md:flex-row gap-8 relative items-start">
           

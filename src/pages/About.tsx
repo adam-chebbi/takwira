@@ -13,7 +13,7 @@ const VALUES = [
 
 export default function About() {
   return (
-    <div className="pt-32 pb-20 space-y-24">
+    <div className="pb-20 space-y-24">
       <SEO title="À Propos | Takwira.com" description="Découvrez l'histoire de Takwira.com, la plateforme qui révolutionne le football amateur en Tunisie." />
       
       {/* Hero */}

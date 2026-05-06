@@ -13,7 +13,7 @@ export default function Matches() {
   const { matches, isLoading } = useMatches({ status: 'open' });
 
   return (
-    <div className="pt-32 pb-20 px-6 md:px-12 max-w-7xl mx-auto space-y-12">
+    <div className="pb-20 px-6 md:px-12 max-w-7xl mx-auto space-y-12">
       <SEO title="Matchs Ouverts | Takwira.com" description="Trouve des joueurs et rejoins un match de foot près de chez toi en Tunisie." />
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div className="space-y-4">

@@ -14,6 +14,7 @@ import { ToastProvider, useToast } from '@/src/components/ui/Toast';
 import { PageLoader } from '@/src/components/ui/PageLoader';
 import { CookieBanner } from '@/src/components/ui/CookieBanner';
 import { PWAInstallBanner } from '@/src/components/ui/PWAInstallBanner';
+import { cn } from '@/src/lib/utils';
 
 import { ErrorBoundary } from '@/src/components/ErrorBoundary';
 import NotFound from '@/src/pages/NotFound';
@@ -399,7 +400,10 @@ function AppContent() {
         )}
       </AnimatePresence>
       {!isDashboard && <Navbar />}
-      <main className="flex-grow flex flex-col">
+      <main className={cn(
+        "flex-grow flex flex-col",
+        !isDashboard && "pt-20 lg:pt-[120px]"
+      )}>
         <ErrorBoundary>
           <AnimatedRoutes />
         </ErrorBoundary>

@@ -56,7 +56,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-background-primary pb-20">
-      <div className="sticky top-0 z-30 bg-background-primary/80 backdrop-blur-xl border-b border-border-subtle p-4">
+      <div className="sticky top-20 lg:top-[120px] z-30 bg-background-primary/80 backdrop-blur-xl border-b border-border-subtle p-4">
         <div className="max-w-xl mx-auto flex items-center justify-between">
            <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-text-primary">
               <ChevronLeft size={24} />
